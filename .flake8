@@ -1,0 +1,3 @@
+[flake8]
+per-file-ignores =
+    qreward/utils/retry.py: E501

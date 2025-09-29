@@ -1,0 +1,120 @@
+[project]
+name = "qreward"
+version = "0.1.5"
+description = "[QReward] RewardService Python Client"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "sunhailin-Leo", email = "379978424@qq.com" },
+    { name = "Vignetting", email = "15199600286@163.com" }
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Unix",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "openai>=1.102.0",
+    "aiohttp",
+    "httpx-aiohttp",
+    "httpx",
+    "aiodns",
+    "tenacity",
+    "aiolimiter",
+    "requests",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+Homepage = "https://github.com/AQ-MedAI/QReward"
+Source = "https://github.com/AQ-MedAI/QReward"
+Documentation = "https://github.com/AQ-MedAI/QReward/README.md"
+Changelog = "https://github.com/AQ-MedAI/QReward/CHANGELOG.md"
+
+#[project.scripts]
+
+[tool.setuptools.package-data]
+"*" = ["py.typed"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.3.3",
+    "pytest-xdist>=3.8.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.1.1",
+    "coverage>=7.6.0",
+    "mypy>=1.0.0",
+    "flake8>=7.3.0",
+    "black>=25.9.0",
+    "ruff>=0.13.2"
+]
+
+[tool.coverage.run]
+branch = true
+omit = [
+    "tests/*",
+    "*tests*",
+]
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true
+precision = 2
+exclude_lines = [
+    'pragma: no cover',
+    'raise NotImplementedError',
+    'if TYPE_CHECKING:',
+    'if typing.TYPE_CHECKING:',
+    '@overload',
+    '@typing.overload',
+    '\(Protocol\):$',
+    'typing.assert_never',
+    '$\s*assert_never\(',
+    'if __name__ == .__main__.:',
+]
+
+[tool.mypy]
+allow_redefinition = false
+disallow_untyped_defs = true
+follow_imports = "normal"
+follow_untyped_imports = true
+no_implicit_optional = true
+show_error_code_links = true
+show_error_codes = true
+strict = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = [
+    "--import-mode=importlib",
+    "--cov=.",
+    "--cov-report=term-missing",
+    "--cov-report=xml:cobertura.xml",
+    "--cov-config=.coveragerc"
+]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
