@@ -84,3 +84,33 @@ $ make install
 * 非框架加速方式：[Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/normal)
 * 结合 Verl 框架使用示例: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples)
 * (Coming soon👀) 结合 Slime 框架使用示例: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/slime_example)
+
+## ⛏ 代码质量
+
+### 单元测试
+
+```shell
+$ pip install -r tests/requirements.txt
+$ make
+```
+
+## 😉 Author
+
+QReward 主要由以下几位开发者开发维护
+
+* [@sunhailin-Leo](https://github.com/sunhailin-Leo)
+* [@Vignetting](https://github.com/Vignetting)
+
+更多贡献者信息可以访问 [QReward/graphs/contributors](https://github.com/AQ-MedAI/QReward/graphs/contributors)
+
+## 💡 贡献
+
+期待能有更多的开发者参与到 QReward 的开发中来，我们会保证尽快 Review PR 并且及时回复。但提交 PR 请确保
+
+1. 通过所有单元测试，如若是新功能，请为其新增单元测试
+2. 遵守开发规范，使用 black 以及 flake8 格式化代码（$ pip install -r requirements-dev.txt）
+3. 如若需要，请更新相对应的文档
+
+## 📃 License
+
+LEGAL.md [©AQ-MedAI](LEGAL.md)

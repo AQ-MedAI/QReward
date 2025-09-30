@@ -86,3 +86,33 @@ $ make install
 * Pure accelerate examples: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/normal)
 * With verl Framework examples: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/verl_example)
 * (Coming soon👀) With slime Framework examples: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/slime_example)
+
+## ⛏ Code Quality
+
+### Unit Tests
+
+```shell
+$ pip install -r tests/requirements.txt
+$ make
+```
+
+## 😉 Authors
+
+QReward is primarily developed and maintained by the following developers:
+
+* [@sunhailin-Leo](https://github.com/sunhailin-Leo)
+* [@Vignetting](https://github.com/Vignetting)
+
+For more contributor information, please visit [QReward/graphs/contributors](https://github.com/AQ-MedAI/QReward/graphs/contributors)
+
+## 💡 Contributing
+
+We look forward to more developers participating in the development of QReward. We will ensure prompt review of PRs and timely responses. However, when submitting a PR, please ensure:
+
+1. Pass all unit tests; if it's a new feature, please add corresponding unit tests
+2. Follow development guidelines, format code using black and flake8 (`$ pip install -r requirements-dev.txt`)
+3. Update corresponding documentation if necessary
+
+## 📃 License
+
+LEGAL.md [©AQ-MedAI](LEGAL.md)
