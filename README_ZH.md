@@ -14,6 +14,8 @@
     </a>
 </p>
 
+[English README](README.md)
+
 ## 📣 介绍 & 背景
 
 该功能旨在解决现有 RL reward 过程中的算力不足和并发限流问题，通过整合多个云算力服务，结合智能调度与请求优化策略，实现算力资源的最大化利用与任务执行时间的显著缩短。
@@ -79,6 +81,6 @@ $ make install
 
 ## 📝 使用
 
-* 非框架加速方式：[Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/pure_accelerate)
+* 非框架加速方式：[Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/normal)
 * 结合 Verl 框架使用示例: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples)
-* 结合 Slime 框架使用示例: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/slime_example)
+* (Coming soon👀) 结合 Slime 框架使用示例: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/slime_example)

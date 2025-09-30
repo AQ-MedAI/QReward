@@ -83,6 +83,6 @@ $ make install
 
 ## 📝 Usage
 
-* Pure accelerate examples: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/pure_accelerate)
+* Pure accelerate examples: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/normal)
 * With verl Framework examples: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/verl_example)
-* With slime Framework examples: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/slime_example)
+* (Coming soon👀) With slime Framework examples: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/slime_example)
