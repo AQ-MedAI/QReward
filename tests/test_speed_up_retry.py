@@ -39,7 +39,9 @@ async def test_speed_up_time():
     await _job()
     elapsed = time.perf_counter() - start
     assert calls == 2
-    assert 3 <= elapsed < 3.1
+    # In Windows 3.12, elapsed secs is very close 3, like 2.998660399999949
+    # assert 3 <= elapsed < 3.1
+    assert 2.9 <= elapsed < 3.1
 
 
 # ---------- 3. 超时异常 ----------

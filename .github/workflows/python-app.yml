@@ -69,10 +69,21 @@ jobs:
         run: |
           pip install .
           make test
-      - uses: actions/upload-artifact@v4
+
+      - name: Check .coverage exists
+        run: ls -lah ${{ github.workspace }}/.coverage || echo ".coverage not found"
+
+      - name: Upload .coverage data file
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
-          path: .coverage
+          path: ${{ github.workspace }}/.coverage
+          if-no-files-found: error  # 或者 ignore
+
+#      - uses: actions/upload-artifact@v4
+#        with:
+#          name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
+#          path: .coverage
 
   codecov:
     name: "Upload coverage"
