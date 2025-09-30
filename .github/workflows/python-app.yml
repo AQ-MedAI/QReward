@@ -101,12 +101,9 @@ jobs:
           coverage report
           coverage html
 
-      # 当无法上传时，直接在控制台输出覆盖率
       - name: Show coverage in log
-        if: secrets.CODECOV_TOKEN == ''
         run: coverage report
 
-      # 保存 HTML 报告作为 Artifact（可下载查看）
       - name: Upload HTML coverage report
         uses: actions/upload-artifact@v4
         with:
