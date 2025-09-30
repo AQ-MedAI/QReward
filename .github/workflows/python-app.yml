@@ -79,6 +79,7 @@ jobs:
           name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
           path: .coverage
           if-no-files-found: error  # 或者 ignore
+          include-hidden-files: true # . 开头的文件都是隐藏的
 
 #      - uses: actions/upload-artifact@v4
 #        with:
