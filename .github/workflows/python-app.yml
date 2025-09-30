@@ -72,7 +72,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
-          path: cobertura.xml
+          path: .coverage
 
   codecov:
     name: "Upload coverage"
@@ -90,7 +90,7 @@ jobs:
 
       - name: Merge coverage files
         run: |
-          coverage combine coverage-files/**/*.xml || echo "Combine skipped"
+          coverage combine coverage-files/**/.coverage || echo "Combine skipped"
           coverage report
           coverage html
 

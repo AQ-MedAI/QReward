@@ -113,7 +113,8 @@ addopts = [
     "--import-mode=importlib",
     "--cov=.",
     "--cov-report=term-missing",
-    "--cov-report=xml:cobertura.xml",
+    "--cov-report=xml",
+    "--cov-report=html",
     "--cov-config=.coveragerc"
 ]
 asyncio_mode = "auto"
