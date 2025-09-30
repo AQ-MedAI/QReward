@@ -84,20 +84,13 @@ jobs:
           path: coverage-files
       - run: ls coverage-files
 
-#      - name: Upload to Codecov
-#        uses: codecov/codecov-action@v5
-#        with:
-#          files: coverage-files/**/*.xml
-#        env:
-#          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
       - name: Install coverage tool
         run: |
           pip install coverage
 
       - name: Merge coverage files
         run: |
-          coverage combine coverage-files/**/coverage.xml || echo "Combine skipped"
+          coverage combine coverage-files/**/*.xml || echo "Combine skipped"
           coverage report
           coverage html
 
@@ -109,3 +102,10 @@ jobs:
         with:
           name: html-coverage-report
           path: htmlcov
+
+#      - name: Upload to Codecov
+#        uses: codecov/codecov-action@v5
+#        with:
+#          files: coverage-files/**/*.xml
+#        env:
+#          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
