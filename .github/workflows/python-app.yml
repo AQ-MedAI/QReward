@@ -70,9 +70,6 @@ jobs:
           pip install .
           make test
 
-      - name: Check .coverage exists
-        run: ls -lah .coverage || echo ".coverage not found"
-
       - name: Upload .coverage data file
         uses: actions/upload-artifact@v4
         with:
@@ -81,10 +78,6 @@ jobs:
           if-no-files-found: error  # 或者 ignore
           include-hidden-files: true # . 开头的文件都是隐藏的
 
-#      - uses: actions/upload-artifact@v4
-#        with:
-#          name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
-#          path: .coverage
 
   codecov:
     name: "Upload coverage"
