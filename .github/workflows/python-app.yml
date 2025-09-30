@@ -1,5 +1,15 @@
 name: QReward CI
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+      - 'examples/**'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'examples/**'
+      - 'docs/**'
 
 jobs:
   lint:

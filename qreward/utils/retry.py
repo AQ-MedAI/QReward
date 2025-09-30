@@ -8,7 +8,16 @@ import time
 from collections import OrderedDict
 from collections.abc import Callable
 from http import HTTPStatus
-from typing import Any, Iterable, Tuple, Type, Union
+from typing import (
+    Any,
+    List,
+    Type,
+    Tuple,
+    Union,
+    Optional,
+    Iterable,
+    Sequence,
+)
 
 from qreward.globals import (
     LIBRARY_OVERLOAD_EXCEPTIONS_MAPPING,
@@ -135,6 +144,14 @@ class RunningTaskPool:
         window_interval: int = 60,
         threshold: int = 3,
     ):
+        """
+        初始化 RunningTaskPool 对象
+
+        Args:
+            window_max_size: 窗口最大大小
+            window_interval: 窗口间隔时间，单位秒
+            threshold: 阈值
+        """
         self._value = 0
         self._max_size_map = OrderedDict()
         self._window_max_size = window_max_size
@@ -168,14 +185,31 @@ class RunningTaskPool:
             return False
 
 
-async def _cancel_async_task(pending, done, retry_interval):
+# 异步任务取消异常组
+_CancelledErrorGroups = (
+    asyncio.CancelledError,
+    concurrent.futures.CancelledError,
+    TimeoutError,
+)
+
+
+async def _cancel_async_task(
+    pending: Sequence[asyncio.Task],
+    done: List[asyncio.Task],
+    retry_interval: Optional[float],
+):
     """
     取消剩余异步任务
+
+    Args:
+        pending: 未完成的异步任务列表
+        done: 已完成的异步任务列表
+        retry_interval: 重试间隔时间，单位秒
     """
     while len(done) > 0:
         try:
             _ = done.pop()
-        except (asyncio.CancelledError, concurrent.futures.CancelledError):
+        except _CancelledErrorGroups:
             pass
     if len(pending) > 0:
         for task in pending:
@@ -186,18 +220,27 @@ async def _cancel_async_task(pending, done, retry_interval):
                 fut=asyncio.gather(*pending, return_exceptions=True),
                 timeout=retry_interval,
             )
-        except (asyncio.CancelledError, concurrent.futures.CancelledError):
+        except _CancelledErrorGroups:
             pass
 
 
-def _cancel_sync_task(not_done, done, retry_interval):
+def _cancel_sync_task(
+    not_done: Sequence[concurrent.futures.Future],
+    done: List,
+    retry_interval: Optional[float],
+):
     """
     取消剩余同步任务
+
+    Args:
+        not_done: 未完成的异步任务列表
+        done: 已完成的异步任务列表
+        retry_interval: 重试间隔时间，单位秒
     """
     while len(done) > 0:
         try:
             _ = done.pop()
-        except (asyncio.CancelledError, concurrent.futures.CancelledError):
+        except _CancelledErrorGroups:
             pass
     for task in not_done:
         if not task.done():
@@ -209,7 +252,7 @@ def _cancel_sync_task(not_done, done, retry_interval):
                 timeout=retry_interval,
                 return_when=concurrent.futures.ALL_COMPLETED,
             )
-        except (asyncio.CancelledError, concurrent.futures.CancelledError):
+        except _CancelledErrorGroups:
             pass
 
 

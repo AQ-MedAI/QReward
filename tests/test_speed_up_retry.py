@@ -4,6 +4,7 @@ import random
 import time
 
 import pytest
+from unittest.mock import MagicMock
 
 from qreward.utils import speed_up_retry
 
@@ -316,3 +317,105 @@ def test_sync_consume_time_func():
         ]
 
     assert len(results) == 128
+
+
+@pytest.mark.asyncio
+async def test_cancel_async_task_done_branch():
+    # mock done.pop 抛 _CancelledErrorGroups
+    from qreward.utils.retry import _cancel_async_task, _CancelledErrorGroups
+
+    mock_done = MagicMock()
+    # 假设 _CancelledErrorGroups 是一个 (ExceptionClass1, ExceptionClass2) 的 tuple
+    exc_instance = _CancelledErrorGroups[0]()
+
+    mock_done.pop.side_effect = [exc_instance]
+    mock_done.__len__.side_effect = [1, 0]  # 第一次len=1进入循环，第二次退出
+
+    pending = []
+    await _cancel_async_task(pending, mock_done, retry_interval=0.01)
+
+
+@pytest.mark.asyncio
+async def test_cancel_async_task_pending_branch(monkeypatch):
+    from qreward.utils.retry import _cancel_async_task
+
+    async def fake_wait_for(*args, **kwargs):
+        raise TimeoutError()
+
+    monkeypatch.setattr(asyncio, "wait_for", fake_wait_for)
+
+    pending = [asyncio.create_task(asyncio.sleep(1))]
+    done = []
+
+    await _cancel_async_task(pending, done, retry_interval=0.01)
+
+
+def test_cancel_sync_task_done_branch():
+    """覆盖第一个 except"""
+
+    from qreward.utils.retry import _cancel_sync_task, _CancelledErrorGroups
+
+    mock_done = MagicMock()
+    # 假设是元组，取第一个异常类
+    exc_instance = (
+        _CancelledErrorGroups[0]()
+        if isinstance(_CancelledErrorGroups, tuple)
+        else _CancelledErrorGroups()
+    )
+    # pop 第一次就抛异常，然后len变成0退出循环
+    mock_done.pop.side_effect = [exc_instance]
+    mock_done.__len__.side_effect = [1, 0]
+
+    not_done = []
+    _cancel_sync_task(not_done, mock_done, retry_interval=0.01)
+    # 没有异常抛出即可
+
+
+def test_cancel_sync_task_not_done_branch(monkeypatch):
+    """覆盖第二个 except"""
+    # patch concurrent.futures.wait，使其抛 _CancelledErrorGroups
+    from qreward.utils.retry import _cancel_sync_task, _CancelledErrorGroups
+
+    def fake_wait(*args, **kwargs):
+        raise (
+            _CancelledErrorGroups[0]()
+            if isinstance(_CancelledErrorGroups, tuple)
+            else _CancelledErrorGroups()
+        )
+
+    monkeypatch.setattr(concurrent.futures, "wait", fake_wait)
+
+    # 构造假的 task
+    class DummyTask(concurrent.futures.Future):
+        def done(self): return False
+        def cancel(self): pass
+
+    not_done = [DummyTask()]
+    done = []
+
+    _cancel_sync_task(not_done, done, retry_interval=0.01)
+
+
+def test_indicator_and_chained_exception():
+    """一次调用覆盖 `indicator in error_message` 和 链式异常递归分支"""
+    from qreward.utils.retry import _overload_check
+
+    # SYSTEM_OVERLOAD_INDICATORS[0]
+    indicator = "errno 24"
+
+    # 内层异常: str() 中包含 indicator
+    class InnerError(Exception):
+        def __str__(self):
+            return f"detected {indicator}"
+
+    inner_exc = InnerError()
+
+    # 外层异常: 有 __cause__ 指向内层异常
+    class OuterError(Exception):
+        pass
+
+    outer_exc = OuterError("outer")
+    outer_exc.__cause__ = inner_exc
+
+    # 调用一次就会走到两个分支
+    assert _overload_check(outer_exc) is True
