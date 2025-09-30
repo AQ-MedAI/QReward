@@ -14,7 +14,9 @@
     </a>
 </p>
 
-## 📣 Introduce & Background
+[中文版本](README_ZH.md)
+
+## 📣 Introduction & Background
 
 This feature is designed to address the compute capacity shortage and concurrency rate-limiting issues in the current RL reward process.
 By integrating multiple cloud compute services and combining intelligent scheduling with request optimization strategies, it maximizes the utilization of computing resources and significantly reduces task execution time.
