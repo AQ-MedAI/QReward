@@ -92,7 +92,6 @@ jobs:
           if-no-files-found: error  # 或者 ignore
           include-hidden-files: true # . 开头的文件都是隐藏的
 
-
   codecov:
     name: "Upload coverage"
     needs: [lint, test]
@@ -104,17 +103,13 @@ jobs:
       - run: ls coverage-files
 
       - name: Install coverage tool
-        run: |
-          pip install coverage
+        run: pip install coverage
 
       - name: Merge coverage files
         run: |
           coverage combine coverage-files/**/.coverage || echo "Combine skipped"
-          coverage report --show-missing --omit="setup.py,install.py,*/__init__.py"
-          coverage html --omit="setup.py,install.py,*/__init__.py"
-
-      - name: Show coverage in log
-        run: coverage report --show-missing --omit="setup.py,install.py,*/__init__.py"
+          coverage report
+          coverage html
 
       - name: Upload HTML coverage report
         uses: actions/upload-artifact@v4
