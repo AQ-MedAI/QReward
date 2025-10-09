@@ -1,5 +1,7 @@
 # Verl 框架下的使用文档
 
+[English](./README.md)
+
 ## 目录文件介绍
 
 * multiturn_grpo.yaml 和 multiturn_megatron_grpo.yaml 是 Verl 框架下的配置文件，分别对应于普通版和 Megatron 版的 GRPO 模型。

@@ -4,6 +4,8 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from slime.rollout.sglang_rollout import GenerateState
+from slime.utils.types import Sample
 
 from qreward.client import OpenAIChatProxy
 
@@ -142,3 +144,17 @@ async def compute_score(
         f"execution: {len(results)} / {len(messages)}"
     )
     return results
+
+
+async def generate(args, sample: Sample, sampling_params) -> Sample:
+    assert not args.partial_rollout, \
+        f"Partial rollout is not supported for this function at the moment."
+
+    state = GenerateState(args)
+
+    url = f"http://{args.sglang_router_ip}:{args.sglang_router_port}/generate"
+
+    # ignore generate process, just return sample
+    # reference: https://github.com/THUDM/slime/blob/main/examples/search-r1/generate_with_search.py
+
+    return sample

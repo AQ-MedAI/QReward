@@ -1,5 +1,7 @@
 # Usage Documentation under the Verl Framework
 
+[中文版](./README_ZH.md)
+
 ## Introduction to Directory Files
 
 * [multiturn_grpo.yaml](file:///Users/hailinsun/Documents/sunhailin-Leo/github/python-projects/QReward/examples/verl_example/multiturn_grpo.yaml) and [multiturn_megatron_grpo.yaml](file:///Users/hailinsun/Documents/sunhailin-Leo/github/python-projects/QReward/examples/verl_example/multiturn_megatron_grpo.yaml) are configuration files under the Verl framework, corresponding to the standard version and Megatron version of the GRPO model respectively.

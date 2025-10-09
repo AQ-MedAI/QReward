@@ -82,8 +82,8 @@ $ make install
 ## 📝 使用
 
 * 非框架加速方式：[Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/normal)
-* 结合 Verl 框架使用示例: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples)
-* (Coming soon👀) 结合 Slime 框架使用示例: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/slime_example)
+* 结合 Verl 框架使用示例: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/verl_example)
+* 结合 Slime 框架使用示例: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/slime_example)
 
 ## ⛏ 代码质量
 
