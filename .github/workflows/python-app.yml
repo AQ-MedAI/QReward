@@ -103,8 +103,8 @@ jobs:
           path: coverage-files
       - run: ls coverage-files
 
-      - name: Install coverage tool
-        run: pip install coverage
+      - name: Setup coverage env
+        run: pip install -r requirements-github-actions.txt
 
       - name: Merge coverage files
         run: |
@@ -118,9 +118,22 @@ jobs:
           name: html-coverage-report
           path: htmlcov
 
-#      - name: Upload to Codecov
-#        uses: codecov/codecov-action@v5
-#        with:
-#          files: coverage-files/**/*.xml
-#        env:
-#          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload coverage to smokeshow
+        run: |
+          for i in 1 2 3 4 5; do
+            if smokeshow upload htmlcov; then
+                echo "Smokeshow upload success!"
+                break
+            fi
+            echo "Smokeshow upload error, sleep 1 sec and try again."
+            sleep 1
+          done
+        env:
+          SMOKESHOW_GITHUB_STATUS_DESCRIPTION: Coverage {coverage-percentage}
+          SMOKESHOW_GITHUB_COVERAGE_THRESHOLD: 90
+          SMOKESHOW_GITHUB_CONTEXT: coverage
+#          SMOKESHOW_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SMOKESHOW_GITHUB_PR_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          SMOKESHOW_AUTH_KEY: ${{ secrets.SMOKESHOW_AUTH_KEY }}
+
+
