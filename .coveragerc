@@ -1,6 +1,7 @@
 [run]
 branch = True
 relative_files = True
+parallel = True
 source =
     qreward
 omit =
@@ -10,7 +11,6 @@ omit =
     tests/*
 
 [report]
-skip_covered = True
 show_missing = True
 precision = 2
 omit =

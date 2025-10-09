@@ -7,6 +7,9 @@
    <a href="https://github.com/AQ-MedAI/QReward/actions">
       <img src="https://github.com/AQ-MedAI/QReward/actions/workflows/python-app.yml/badge.svg" alt="Github Actions Status">
    </a>
+   <a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/AQ-MedAI/QReward" target="_blank">
+      <img src="https://coverage-badge.samuelcolvin.workers.dev/AQ-MedAI/QReward.svg" alt="Coverage">
+   </a>
    <a href="https://badge.fury.io/py/qreward">
       <img src="https://badge.fury.io/py/qreward.svg" alt="PyPI version">
    </a>
