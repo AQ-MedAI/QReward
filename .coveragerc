@@ -5,20 +5,14 @@ omit =
     install.py
     test.py
     tests/*
-    */__init__.py
-    */_version.py
 
 [report]
 show_missing = True
 omit =
     setup.py
     install.py
-    */__init__.py
-    */_version.py
 
 [html]
 omit =
     setup.py
     install.py
-    */__init__.py
-    */_version.py
