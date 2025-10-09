@@ -1,4 +1,5 @@
 [run]
+source = .
 omit =
     setup.py
     install.py
