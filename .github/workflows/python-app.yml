@@ -96,6 +96,8 @@ jobs:
     name: "Upload coverage"
     needs: [lint, test]
     runs-on: ubuntu-latest
+    permissions:
+      statuses: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -118,6 +120,12 @@ jobs:
           name: html-coverage-report
           path: htmlcov
 
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+
+      # Try 5 times to upload coverage to smokeshow
       - name: Upload coverage to smokeshow
         run: |
           for i in 1 2 3 4 5; do
@@ -132,7 +140,7 @@ jobs:
           SMOKESHOW_GITHUB_STATUS_DESCRIPTION: Coverage {coverage-percentage}
           SMOKESHOW_GITHUB_COVERAGE_THRESHOLD: 90
           SMOKESHOW_GITHUB_CONTEXT: coverage
-#          SMOKESHOW_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SMOKESHOW_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SMOKESHOW_GITHUB_PR_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           SMOKESHOW_AUTH_KEY: ${{ secrets.SMOKESHOW_AUTH_KEY }}
 
