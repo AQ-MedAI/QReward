@@ -1,17 +1,26 @@
 <h1 align="center">QReward</h1>
 <p align="center">
-    <em>AQ ✖️️ Reward = QReward</em>
+   <em>AQ ✖️️ Reward = QReward</em>
 </p>
 
 <p align="center">
-    <a href="https://github.com/AQ-MedAI/QReward/actions">
-        <img src="https://github.com/AQ-MedAI/QReward/actions/workflows/python-app.yml/badge.svg" alt="Github Actions Status">
-    </a>
+   <a href="https://github.com/AQ-MedAI/QReward/actions">
+      <img src="https://github.com/AQ-MedAI/QReward/actions/workflows/python-app.yml/badge.svg" alt="Github Actions Status">
+   </a>
+   <a href="https://badge.fury.io/py/qreward">
+      <img src="https://badge.fury.io/py/qreward.svg" alt="PyPI version">
+   </a>
+   <a href="https://pypi.org/project/qreward/">
+      <img src="https://img.shields.io/pypi/pyversions/qreward.svg?colorB=brightgreen" alt="PyPI - Python Version">
+   </a>
 </p>
 <p align="center">
-    <a href="https://github.com/AQ-MedAI/QReward/pulls">
-        <img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat" alt="Contributions welcome">
-    </a>
+   <a href="https://pypi.org/project/qreward">
+      <img src="https://img.shields.io/pypi/format/qreward.svg" alt="PyPI - Format">
+   </a>
+   <a href="https://github.com/AQ-MedAI/QReward/pulls">
+      <img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat" alt="Contributions welcome">
+   </a>
 </p>
 
 [中文版本](README_ZH.md)

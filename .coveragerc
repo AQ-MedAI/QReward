@@ -10,3 +10,4 @@ show_missing = True
 omit =
     setup.py
     install.py
+    */__init__.py
