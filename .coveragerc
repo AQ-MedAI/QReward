@@ -11,19 +11,6 @@ source =
 [report]
 skip_covered = True
 show_missing = True
-precision = 2
-exclude_lines = [
-    'pragma: no cover',
-    'raise NotImplementedError',
-    'if TYPE_CHECKING:',
-    'if typing.TYPE_CHECKING:',
-    '@overload',
-    '@typing.overload',
-    '\(Protocol\):$',
-    'typing.assert_never',
-    '$\s*assert_never\(',
-    'if __name__ == .__main__.:',
-]
 omit =
     setup.py
     install.py
