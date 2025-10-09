@@ -70,8 +70,13 @@ dev-dependencies = [
 [tool.coverage.run]
 branch = true
 omit = [
-    "tests/*",
-    "*tests*",
+    "setup.py",
+    "install.py",
+    "test.py",
+    "tests/*"
+]
+source = [
+    "qreward/*"
 ]
 
 [tool.coverage.report]
@@ -89,6 +94,19 @@ exclude_lines = [
     'typing.assert_never',
     '$\s*assert_never\(',
     'if __name__ == .__main__.:',
+]
+omit = [
+    "setup.py",
+    "install.py"
+]
+
+[tool.coverage.html]
+show_contexts = true
+omit = [
+    "setup.py",
+    "install.py",
+    "test.py",
+    "tests/*"
 ]
 
 [tool.mypy]
