@@ -16,6 +16,9 @@
    <a href="https://pypi.org/project/qreward/">
       <img src="https://img.shields.io/pypi/pyversions/qreward.svg?colorB=brightgreen" alt="PyPI - Python Version">
    </a>
+   <a href="https://img.shields.io/github/repo-size/AQ-MedAI/QReward">
+      <img src="https://img.shields.io/github/repo-size/AQ-MedAI/QReward" alt="GitHub repo size">
+   </a>
 </p>
 <p align="center">
    <a href="https://pypi.org/project/qreward">
