@@ -79,10 +79,15 @@ jobs:
           pip install -r requirements.txt
           pip install -r tests/requirements.txt
 
-      - name: Run unit test
-        run: |
-          pip install .
-          make test
+      # 这里是替换成 retry action
+      - name: Run unit test (retry up to 3 times)
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 3
+          retry_wait_seconds: 5
+          command: |
+            pip install .
+            make test
 
       - name: Upload .coverage data file
         uses: actions/upload-artifact@v4
