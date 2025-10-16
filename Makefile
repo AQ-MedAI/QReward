@@ -43,5 +43,5 @@ lint:
 
 .PHONY: clean
 clean:
-	@rm -rf htmlcov dist build $(PACKAGE_NAME).egg-info
-	@rm -f .coverage tests/.coverage coverage.xml
+	@rm -rf htmlcov tests/htmlcov dist build $(PACKAGE_NAME).egg-info
+	@rm -f .coverage coverage.xml tests/.coverage tests/coverage.xml

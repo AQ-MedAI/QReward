@@ -2,12 +2,18 @@ import asyncio
 import os
 from collections.abc import Callable
 from datetime import datetime
-from http import HTTPStatus
-from typing import Any, Dict, Tuple
+from typing import (
+    Any,
+    Dict,
+    List,
+    Tuple,
+    Union,
+    Optional,
+    Sequence,
+)
 
-from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
-from httpx import Limits, TimeoutException
+from httpx import Limits, Timeout, TimeoutException
 from openai import (
     AsyncOpenAI,
     APIConnectionError,
@@ -24,17 +30,26 @@ from tenacity import (
     wait_exponential,
 )
 
+from qreward.client.patch_openai import patch_openai_embeddings
+from qreward.types import RequestHook, ResponseHook
+from qreward.utils import patch_httpx
+
+
 # Hard code here: 最大重试次数
 MAX_RETRIES = 10
+
+# Hard code for patch:
+patch_httpx()
 
 # 错误组
 _ERROR_GROUP = (
     TimeoutError,
+    asyncio.TimeoutError,
+    TimeoutException,
     RateLimitError,
     APIStatusError,
     APITimeoutError,
     APIConnectionError,
-    TimeoutException,
 )
 
 
@@ -46,27 +61,31 @@ class OpenAIChatProxy:
         api_key: str | None = None,
         debug: bool = False,
         max_concurrent: int = 1024,
-        chat_process_fuc: Callable = None,
-        error_process_fuc: Callable = None,
-        **openai_kwargs,
+        chat_process_fuc: Callable | None = None,
+        error_process_fuc: Callable | None = None,
+        timeout: float | Timeout = None,
+        rate_limiter_bucket_size: float = 50.0,
+        rate_limiter_bucket_period: float = 1.0,
+        httpx_request_hook: RequestHook | None = None,
+        httpx_response_hook: ResponseHook | None = None,
+        is_hack_embedding_method: bool = False,
     ):
         """初始化 OpenAI Chat 代理
 
         Args:
             base_url: OpenAI API 的地址
-
             api_key: API密钥（默认尝试从环境变量 OPENAI_API_KEY 中获取）
             debug: 是否开启调试模式（默认是: False）
             max_concurrent: 最大并发请求数（默认是: 1024）
             chat_process_fuc: 对话处理函数
             error_process_fuc: 错误处理函数
-
-            **openai_kwargs: 其他 AsyncOpenAI 参数
-                websocket_base_url: OpenAI API 的 WebSocket 地址
-                timeout: 超时时间（默认是: None）
-                max_retries: 最大重试次数（默认是: 0）
-                headers: 自定义请求头
-                verify: 是否验证 SSL 证书（默认是: False）
+            timeout: 超时时间（默认是: None）
+            rate_limiter_bucket_size: 令牌桶大小（默认是: 50.0）
+            rate_limiter_bucket_period: 令牌桶刷新时间（默认是: 1.0）
+            httpx_request_hook: httpx 请求钩子函数（默认是: None）
+            httpx_response_hook: httpx 响应钩子函数（默认是: None）
+            is_hack_embedding_method: 是否开启 Hack Embedding 方法（默认是: False）
+        ):
         """
         self.debug = debug
         self._max_concurrent = max_concurrent
@@ -74,28 +93,20 @@ class OpenAIChatProxy:
         self.client = AsyncOpenAI(
             api_key=self._api_key,
             base_url=base_url,
-            websocket_base_url=openai_kwargs.get("websocket_base_url"),
-            timeout=openai_kwargs.get("timeout"),
-            # 这个地方尽量让重试装饰器去重试
-            max_retries=openai_kwargs.get("max_retries", 0),
-            http_client=DefaultAioHttpClient(
-                headers=openai_kwargs.get("headers"),
-                # 默认值是 100 / 20，现在需要根据 self._max_concurrent 的值来调整配比
-                limits=Limits(
-                    max_connections=self._max_concurrent,
-                    max_keepalive_connections=self._max_concurrent,
-                ),
-                # 邪修
-                verify=openai_kwargs.get("verify", False),
+            timeout=timeout,
+            max_retries=0,
+            http_client=self._default_http_client(
+                request_hook=httpx_request_hook,
+                response_hook=httpx_response_hook,
             ),
         )
 
-        self.semaphore = asyncio.Semaphore(value=max_concurrent)
+        self.semaphore = asyncio.Semaphore(value=self._max_concurrent)
 
-        # 令牌桶：50 QPS
+        # default token bucket size is 50 QPS
         self.rate_limiter = AsyncLimiter(
-            max_rate=openai_kwargs.get("bucket_size", 50),
-            time_period=openai_kwargs.get("bucket_period", 1),
+            max_rate=rate_limiter_bucket_size,
+            time_period=rate_limiter_bucket_period,
         )
 
         self._default_temperature = 0.0
@@ -103,11 +114,38 @@ class OpenAIChatProxy:
         self._default_chat_process_fuc = chat_process_fuc
         self._default_error_process_fuc = error_process_fuc
 
+        # for hacking embedding
+        self._is_hack_embedding = is_hack_embedding_method
+        if self._is_hack_embedding:
+            patch_openai_embeddings()
+
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.client.close()
+
+    def _default_http_client(
+        self,
+        request_hook: RequestHook | None = None,
+        response_hook: ResponseHook | None = None,
+    ) -> DefaultAioHttpClient:
+        _http_client = DefaultAioHttpClient(
+            verify=False,
+            # 默认值是 100 / 20，现在需要根据 self._max_concurrent 的值来调整配比
+            limits=Limits(
+                max_connections=self._max_concurrent,
+                max_keepalive_connections=self._max_concurrent,
+            ),
+        )
+
+        if request_hook and isinstance(request_hook, Callable):
+            _http_client.event_hooks.get("request").append(request_hook)
+
+        if response_hook and isinstance(response_hook, Callable):
+            _http_client.event_hooks.get("response").append(response_hook)
+
+        return _http_client
 
     @staticmethod
     def get_openai_key() -> str | None:
@@ -235,10 +273,10 @@ class OpenAIChatProxy:
     )
     async def embeddings(
         self,
-        sentences: list[str],
         *,
+        sentences: Optional[Union[str, Sequence]] = None,
         model: str | None = None,
-        custom_url: str | None = None,
+        extra_body: object | None = None,
         **kwargs,
     ) -> list:
         """调用 OpenAI Embeddings 接口
@@ -246,7 +284,8 @@ class OpenAIChatProxy:
         Args:
             sentences: 句子列表
             model: 使用的模型
-            custom_url: 自定义 embedding 接口
+            extra_body: 额外的请求体参数
+                        （如果接口参数不同，建议通过 extra_body 传）
             **kwargs: 其他参数
 
         Returns:
@@ -256,48 +295,31 @@ class OpenAIChatProxy:
             if self.debug:
                 print(
                     f"[INFO] - [time: {datetime.now()}] - "
-                    f"[Begin] - Call embedding: {custom_url}",
+                    f"[Begin] - Call embedding: {model}",
                 )
 
-            if custom_url:
-                async with ClientSession() as session:
-                    async with session.post(
-                        url=custom_url,
-                        json={"sentences": sentences},
-                        headers={"Content-Type": "application/json"},
-                        timeout=kwargs.get("timeout", self._default_timeout),
-                    ) as response:
-                        if self.debug:
-                            print(
-                                f"[INFO] - [time: {datetime.now()}] - [End] - "
-                                f"Call embedding: {custom_url} success!",
-                            )
+            # typing: from openai.types import CreateEmbeddingResponse
+            embedding_resp = await asyncio.wait_for(
+                self.client.embeddings.create(
+                    input=sentences,
+                    model=model,
+                    extra_body=extra_body,
+                ),
+                timeout=kwargs.get("timeout", self._default_timeout),
+            )
 
-                        # 检查 HTTP 状态码
-                        if response.status == HTTPStatus.OK:
-                            data = await response.json()
-                            return data.get("embeddings", [])
-                        error_text = await response.text()
-                        # TODO Logger
-                        print(
-                            f"HTTP Status Code: {response.status}, "
-                            f"Error Text: {error_text}",
-                        )
-                        return []
-            else:
-                # typing: from openai.types import CreateEmbeddingResponse
-                embedding_resp = await asyncio.wait_for(
-                    self.client.embeddings.create(
-                        input=sentences,
-                        model=model,
-                    ),
-                    timeout=kwargs.get("timeout", self._default_timeout),
+            if self.debug:
+                print(
+                    f"[INFO] - [time: {datetime.now()}] - [End] - "
+                    f"Call embedding: {model} success!",
                 )
-                return embedding_resp.data
+
+            return embedding_resp.embeddings if self._is_hack_embedding \
+                else embedding_resp.data
         except Exception as e:
             print(
                 f"[time: {datetime.now()}] - "
-                f"[Error] - Call embedding: {custom_url}, "
+                f"[Error] - Call embedding: {model}, "
                 f"error: {e!s}, error type: {type(e)}",
             )
 
@@ -312,10 +334,10 @@ class OpenAIChatProxy:
 
     async def batch_embeddings(
         self,
-        batch_sentences: list[list[str]],
         *,
+        batch_sentences: List[Union[str, Sequence]],
         model: str | None = None,
-        custom_url: str | None = None,
+        extra_bodies: List[object] | None = None,
         **kwargs,
     ) -> list[list]:
         """批量调用 OpenAI Embeddings 接口
@@ -323,7 +345,7 @@ class OpenAIChatProxy:
         Args:
             batch_sentences: 多个句子列表
             model: 使用的模型
-            custom_url: 自定义 embedding 接口
+            extra_bodies: 额外的请求体参数列表
             **kwargs: 其他参数
 
         Returns:
@@ -337,7 +359,7 @@ class OpenAIChatProxy:
                     self.embeddings(
                         model=model,
                         sentences=batch_sentences[i],
-                        custom_url=custom_url,
+                        extra_body=extra_bodies[i] if extra_bodies else None,
                         **kwargs,
                     ),
                 ),

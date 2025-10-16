@@ -79,6 +79,44 @@ async def simple_call_batch_by_context():
     )
 
 
+async def call_batch_embedding():
+    start_time = datetime.now()
+
+    proxy = OpenAIChatProxy(
+        base_url=os.getenv("OPENAI_API_BASE"),
+        api_key=os.getenv("OPENAI_API_KEY"),
+    )
+
+    batch_embedding_result = await proxy.batch_embeddings(
+        batch_sentences=[["123", "456"], ["456", "789"]],
+        model="embedding-model",
+    )
+    print(
+        f"{(datetime.now() - start_time).seconds} secs, "
+        f"task len: {len(batch_embedding_result)}"
+    )
+
+
+async def call_batch_embedding_by_context():
+    start_time = datetime.now()
+
+    async with OpenAIChatProxy(
+        base_url=os.getenv("OPENAI_API_BASE"),
+        api_key=os.getenv("OPENAI_API_KEY"),
+    ) as proxy:
+        batch_embedding_result = await proxy.batch_embeddings(
+            batch_sentences=[["123", "456"], ["456", "789"]],
+            model="embedding-model",
+        )
+
+    print(
+        f"{(datetime.now() - start_time).seconds} secs, "
+        f"task len: {len(batch_embedding_result)}"
+    )
+
+
 if __name__ == "__main__":
     asyncio.run(simple_call_batch())
     asyncio.run(simple_call_batch_by_context())
+    asyncio.run(call_batch_embedding())
+    asyncio.run(call_batch_embedding_by_context())

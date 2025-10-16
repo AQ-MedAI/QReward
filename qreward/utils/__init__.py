@@ -1,4 +1,6 @@
-from ..utils.retry import retry, speed_up_retry
+from ..utils.patch import patch_httpx
+from ..utils.retry import retry
+from ..utils.schedule import schedule
 from ..utils.socket_keepalive import (
     RequestsTCPKeepAliveAdapter,
     aiohttp_keepalive_socket_factory,
@@ -9,6 +11,7 @@ __all__ = [
     "aiohttp_keepalive_socket_factory",
     "httpx_keepalive_socket",
     "RequestsTCPKeepAliveAdapter",
-    "speed_up_retry",
+    "schedule",
     "retry",
+    "patch_httpx",
 ]

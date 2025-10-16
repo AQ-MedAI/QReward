@@ -1,5 +1,7 @@
-from collections.abc import Callable
-from typing import Tuple, Union
+from collections.abc import Callable, Coroutine
+from typing import Any, Tuple, Union
+
+from httpx import Request, Response
 
 # socket options type
 SOCKET_OPTION = Union[
@@ -12,3 +14,8 @@ SOCKET_OPTION = Union[
 # simple retry types
 RetryPredicate = Callable[[Exception], bool]
 BackoffGenerator = Callable[[int], float]
+
+
+# httpx hook type
+RequestHook = Callable[[Request], None] | Coroutine[Any, Any, None]
+ResponseHook = Callable[[Response], None] | Coroutine[Any, Any, None]

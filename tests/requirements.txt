@@ -6,3 +6,6 @@ coverage>=7.6.0
 mypy>=1.0.0
 flake8>=7.3.0
 black>=25.9.0
+# for patch test
+orjson
+ujson

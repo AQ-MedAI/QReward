@@ -66,6 +66,33 @@ async def call_single_with_proxy_manager():
     )
 
 
+async def call_single_embedding_with_custom_path_and_input():
+    sentences = ["你好", "再见"]
+
+    def update_path(request) -> None:
+        # CH: 默认 OpenAI 是 /embeddings 路径，这里重写为 /embed
+        # EN: default OpenAI is /embeddings path, here rewrite to /embed
+        if request.url.path in ["/embeddings"]:
+            request.url = request.url.copy_with(path="/embed")
+
+    async with OpenAIChatProxy(
+        base_url="http://custom_url:8000",
+        api_key=os.getenv("OPENAI_API_KEY"),
+        **{"request_hook": update_path}
+    ) as proxy:
+        embedding_result = await proxy.embeddings(
+            model="embedding-model",
+            sentences=[],
+            extra_body={"sentences":  sentences},
+            # CH: 上面这么写是因为 OpenAI 默认 key 是 input 而不是 sentences
+            # EN: above is because OpenAI default key is input instead of sentences
+
+            # CH: 如果用户自己自定义了 key，那么需要使用 extra_body 参数传递
+            # EN: if user custom key, need to pass through extra_body parameter
+        )
+        print(embedding_result)
+
+
 if __name__ == "__main__":
     asyncio.run(simple_call())
     asyncio.run(simple_call_by_context())

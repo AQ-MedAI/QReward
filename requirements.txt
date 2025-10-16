@@ -6,3 +6,4 @@ aiodns
 tenacity
 aiolimiter
 requests
+ujson

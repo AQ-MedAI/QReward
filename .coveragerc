@@ -22,8 +22,3 @@ omit =
 [html]
 directory = htmlcov
 show_contexts = True
-omit =
-    setup.py
-    install.py
-    test.py
-    tests/*

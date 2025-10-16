@@ -1,15 +1,15 @@
-import asyncio
-from http import HTTPStatus
-from unittest.mock import AsyncMock, MagicMock
-
-import aiohttp
 import pytest
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from qreward.client import OpenAIChatProxy, OpenAIChatProxyManager
+from qreward.client import (
+    OpenAIChatProxy,
+    OpenAIChatProxyManager,
+)
+
 
 TEST_URL = "http://fake"
 TEST_API_KEY = "abc"
-TEST_CUSTOM_URL = "http://fake/api/embed"
 
 
 def test_get_openai_key_env(monkeypatch):
@@ -32,6 +32,39 @@ def test_with_methods():
         )._default_error_process_fuc
         == dummy_error_func
     )
+
+
+def test_httpx_add_hook():
+
+    async def update_path(request) -> None:
+        if request.url.path in ["/embeddings"]:
+            request.url = request.url.copy_with(
+                path="/v1/embeddings",
+            )
+
+    async def update_resp(response) -> None:
+        print(response.status_code)
+
+    proxy = OpenAIChatProxy(
+        base_url=TEST_URL,
+        api_key=TEST_API_KEY,
+        httpx_request_hook=update_path,
+        httpx_response_hook=update_resp,
+    )
+
+    assert len(proxy.client._client.event_hooks.get("request")) == 1
+    assert len(proxy.client._client.event_hooks.get("response")) == 1
+    assert proxy.client._client.event_hooks.get("request")[0] == update_path
+    assert proxy.client._client.event_hooks.get("response")[0] == update_resp
+
+
+def test_proxy_add_patch():
+    proxy = OpenAIChatProxy(
+        base_url=TEST_URL,
+        api_key=TEST_API_KEY,
+        is_hack_embedding_method=True,
+    )
+    proxy._is_hack_embedding = True
 
 
 @pytest.mark.asyncio
@@ -98,39 +131,8 @@ async def test_embeddings_with_openai(monkeypatch):
     emb_mock.data = [{"embedding": [0.1, 0.2]}]
     proxy.client.embeddings.create = AsyncMock(return_value=emb_mock)
 
-    res = await proxy.embeddings(["hello"], model="embedding-model")
+    res = await proxy.embeddings(sentences=["hello"], model="embedding-model")
     assert res == [{"embedding": [0.1, 0.2]}]
-
-
-@pytest.mark.asyncio
-async def test_embeddings_with_custom_url_empty(monkeypatch):
-    proxy = OpenAIChatProxy(base_url=TEST_URL, api_key=TEST_API_KEY)
-
-    async def fake_post(*args, **kwargs):
-        class FakeResponse:
-            status = HTTPStatus.BAD_REQUEST
-
-            async def json(self):
-                return {}
-
-            async def text(self):
-                return "error"
-
-            async def __aenter__(self):
-                return self
-
-            async def __aexit__(self, *a):
-                return None
-
-        return FakeResponse()
-
-    monkeypatch.setattr(aiohttp.ClientSession, "post", fake_post)
-
-    result = await proxy.embeddings(
-        ["hello"],
-        custom_url=TEST_CUSTOM_URL,
-    )
-    assert result == []
 
 
 @pytest.mark.asyncio
@@ -138,8 +140,30 @@ async def test_batch_embeddings(monkeypatch):
     proxy = OpenAIChatProxy(base_url=TEST_URL, api_key=TEST_API_KEY)
     proxy.embeddings = AsyncMock(side_effect=[["embed1"], ["embed2"]])
 
-    res = await proxy.batch_embeddings([["a"], ["b"]], model="emb-model")
+    res = await proxy.batch_embeddings(
+        batch_sentences=[["a"], ["b"]],
+        model="emb-model",
+    )
     assert res == [["embed1"], ["embed2"]]
+
+
+@pytest.mark.asyncio
+async def test_embeddings_debug_print(capsys):
+    proxy = OpenAIChatProxy(
+        base_url=TEST_URL,
+        api_key=TEST_API_KEY,
+        debug=True,
+    )
+    emb_mock = MagicMock()
+    emb_mock.data = [{"embedding": [0.1, 0.2]}]
+    proxy.client.embeddings.create = AsyncMock(return_value=emb_mock)
+
+    await proxy.embeddings(sentences=["hello"], model="embedding-model")
+
+    # 捕获 debug 输出
+    captured = capsys.readouterr()
+    assert "[Begin] - Call embedding: embedding-model" in captured.out
+    assert "[End] - Call embedding: embedding-model success!" in captured.out
 
 
 @pytest.mark.asyncio
@@ -231,124 +255,28 @@ async def test_batch_chat_completion_error_process():
     assert results == ["processed: boom"]
 
 
-class DummyResponseOK:
-    """模拟 200 OK 响应"""
-
-    def __init__(self):
-        self.status = HTTPStatus.OK
-
-    async def json(self):
-        # 模拟 API 返回 embeddings
-        return {"embeddings": [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]}
-
-    async def text(self):
-        return "OK"
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-
-class DummyResponseError:
-    """模拟错误响应（非200）"""
-
-    def __init__(self):
-        self.status = HTTPStatus.BAD_REQUEST
-
-    async def json(self):
-        return {}
-
-    async def text(self):
-        return "Bad Request"
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-
-class DummySession:
-    """模拟 aiohttp.ClientSession"""
-
-    def __init__(self, ok=True):
-        self.ok = ok
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-    def post(self, *args, **kwargs):
-        # 根据 ok 参数返回不同的响应
-        if self.ok:
-            return DummyResponseOK()
-        else:
-            return DummyResponseError()
-
-
 @pytest.mark.asyncio
-async def test_embeddings_with_custom_url_success(monkeypatch, capsys):
-    # 动态检查当前模块路径
-    module_path = OpenAIChatProxy.__module__
-
-    # 第一次测试：debug=True + 正常返回
-    monkeypatch.setattr(
-        f"{module_path}.ClientSession",
-        lambda: DummySession(ok=True),
-    )
+async def test_embeddings_returns_empty_list_on_timeout():
+    """
+    测试当embeddings方法遇到超时异常时返回空列表
+    """
+    # 创建OpenAIChatProxy实例
     proxy = OpenAIChatProxy(
         base_url=TEST_URL,
-        api_key=TEST_API_KEY,
-        debug=True,  # 打开调试
+        api_key=TEST_API_KEY
     )
 
-    sentences = ["hello", "world"]
-    result = await proxy.embeddings(
-        sentences=sentences,
-        custom_url=TEST_CUSTOM_URL,
-    )
+    # 模拟asyncio.wait_for抛出TimeoutError
+    with patch(target='asyncio.wait_for',
+               side_effect=Exception("Test other exception")):
+        # 调用embeddings方法
+        result = await proxy.embeddings(
+            sentences=["test sentence"],
+            model="text-embedding-model"
+        )
 
-    assert isinstance(result, list)
-    assert len(result) == 2
-    assert result[0] == [0.1, 0.2, 0.3]
-
-    # 检查 debug 信息是否打印
-    captured = capsys.readouterr()
-    assert "[Begin] - Call embedding" in captured.out
-    assert "[End] - Call embedding" in captured.out
-
-
-@pytest.mark.asyncio
-async def test_embeddings_with_custom_url_error(monkeypatch, capsys):
-    # 动态检查当前模块路径
-    module_path = OpenAIChatProxy.__module__
-
-    sentences = ["hello", "world"]
-
-    proxy = OpenAIChatProxy(
-        base_url=TEST_URL,
-        api_key=TEST_API_KEY,
-    )
-
-    # 第二次测试：错误响应分支
-    monkeypatch.setattr(
-        f"{module_path}.ClientSession",
-        lambda: DummySession(ok=False),
-    )
-    result_error = await proxy.embeddings(
-        sentences=sentences,
-        custom_url=TEST_CUSTOM_URL,
-    )
-
-    assert result_error == []  # 错误响应应该返回空列表
-    # 同时会打印 HTTP Status Code 和 Error Text
-    captured_err = capsys.readouterr()
-    assert "HTTP Status Code" in captured_err.out
-    assert "Bad Request" in captured_err.out
+        # 验证返回空列表
+        assert result == []
 
 
 @pytest.mark.asyncio

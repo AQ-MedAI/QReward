@@ -77,6 +77,10 @@ Beyond supporting Verl and Slime, the solution also provides acceleration capabi
    * Integrate additional compute resources beyond the Model Cloud Service into a unified compute pool.
    * Optimize distribution based on task priority, latency sensitivity, and load balancing.
 
+## 📒 ChangeLog
+
+[CHANGELOG.md](CHANGELOG.md)
+
 ## 🔰 Installation
 
 **pip install**
