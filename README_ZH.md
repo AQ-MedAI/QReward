@@ -135,4 +135,4 @@ QReward 主要由以下几位开发者开发维护
 
 ## 📃 License
 
-LEGAL.md [©AQ-MedAI](LICENSE)
+Apache 2.0 [©AQ-MedAI](LICENSE)

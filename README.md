@@ -137,4 +137,4 @@ We look forward to more developers participating in the development of QReward. 
 
 ## 📃 License
 
-LEGAL.md [©AQ-MedAI](LICENSE)
+Apache 2.0 [©AQ-MedAI](LICENSE)
