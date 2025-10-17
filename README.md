@@ -27,6 +27,9 @@
    <a href="https://github.com/AQ-MedAI/QReward/pulls">
       <img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat" alt="Contributions welcome">
    </a>
+   <a href="https://github.com/AQ-MedAI/QReward/LICENSE">
+      <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
+   </a>
 </p>
 
 [中文版本](README_ZH.md)
