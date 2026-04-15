@@ -1,6 +1,6 @@
 from ..utils.patch import patch_httpx
 from ..utils.retry import retry
-from ..utils.schedule import schedule
+from ..utils.scheduler import schedule
 from ..utils.socket_keepalive import (
     RequestsTCPKeepAliveAdapter,
     aiohttp_keepalive_socket_factory,

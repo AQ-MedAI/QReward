@@ -78,7 +78,7 @@ async def call_single_embedding_with_custom_path_and_input():
     async with OpenAIChatProxy(
         base_url="http://custom_url:8000",
         api_key=os.getenv("OPENAI_API_KEY"),
-        **{"request_hook": update_path}
+        httpx_request_hook=update_path,
     ) as proxy:
         embedding_result = await proxy.embeddings(
             model="embedding-model",

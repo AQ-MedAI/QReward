@@ -7,16 +7,24 @@ WHEEL_FILE = ./dist/$(PACKAGE_NAME)-*.whl
 help:
 	@echo "Please use \`make <target>\` where <target> is one of"
 	@echo "  test        -- run local unit tests"
+	@echo "  test-cov    -- run tests with coverage report"
 	@echo "  build       -- build the package"
 	@echo "  install     -- install the package"
 	@echo "  reinstall   -- uninstall and reinstall the tool"
 	@echo "  uninstall   -- uninstall the package"
-	@echo "  lint        -- run both flake8"
+	@echo "  lint        -- run flake8 linter"
+	@echo "  fmt         -- format code with black"
+	@echo "  dev         -- install dev dependencies and editable package"
+	@echo "  check       -- run lint + test-cov"
 	@echo "  clean       -- clean up temporary files"
 
 .PHONY: test
 test:
 	@pytest -n auto -v tests/
+
+.PHONY: test-cov
+test-cov:
+	@pytest --cov=qreward --cov-report=term-missing --cov-report=html tests/
 
 .PHONY: build
 build:
@@ -40,6 +48,19 @@ uninstall:
 .PHONY: lint
 lint:
 	@flake8 --exclude=build,examples,.venv
+
+.PHONY: fmt
+fmt:
+	@black qreward/ tests/
+
+.PHONY: dev
+dev:
+	@pip install -r requirements-dev.txt --no-cache-dir
+	@pip install -e . --no-cache-dir
+
+.PHONY: check
+check: lint test-cov
+	@echo "All checks passed!"
 
 .PHONY: clean
 clean:
