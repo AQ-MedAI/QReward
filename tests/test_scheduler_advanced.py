@@ -311,10 +311,12 @@ class TestPriorityTaskQueueSnapshot:
         """Test snapshot includes wait_seconds."""
         queue = PriorityTaskQueue()
         queue.put("task1")
-        time.sleep(0.05)
+        time.sleep(0.1)
         queue.put("task2")
 
         snapshot = queue.snapshot()
+        # Use a relaxed threshold to avoid flaky failures on Windows,
+        # where time.sleep() precision is ~15.6ms.
         assert snapshot[0]["wait_seconds"] >= 0.05
         assert snapshot[1]["wait_seconds"] >= 0.0
 
