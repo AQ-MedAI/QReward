@@ -72,7 +72,7 @@ class ConfigWatcher:
         self._callback = callback
         self._poll_interval = poll_interval
         self._cooldown = cooldown
-        self._last_update_time: float = 0
+        self._last_update_time: float = -float("inf")
         self._last_mtime: float = 0
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
