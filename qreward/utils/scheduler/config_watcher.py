@@ -12,9 +12,10 @@ logger = logging.getLogger(__name__)
 _ENV_PREFIX = "QREWARD_SCHEDULE_"
 _UPDATABLE_FIELDS = frozenset({
     "timeout", "retry_times", "retry_interval", "limit_size", "limit_window",
-    "hedged_request_time", "hedged_request_proportion", "hedged_request_max_times",
-    "speed_up_max_multiply", "debug", "adaptive_limit", "adaptive_limit_min",
-    "adaptive_limit_max", "adaptive_error_threshold", "adaptive_latency_threshold",
+    "hedged_request_time", "hedged_request_proportion",
+    "hedged_request_max_times", "speed_up_max_multiply", "debug",
+    "adaptive_limit", "adaptive_limit_min", "adaptive_limit_max",
+    "adaptive_error_threshold", "adaptive_latency_threshold",
     "adaptive_window_seconds", "priority",
 })
 
@@ -28,7 +29,9 @@ class ConfigWatcher:
     - **callback**: Invokes a user-supplied callable that returns a dict.
 
     Example:
-        >>> watcher = ConfigWatcher(config, source="file", file_path="config.json")
+        >>> watcher = ConfigWatcher(
+        ...     config, source="file", file_path="config.json"
+        ... )
         >>> watcher.start()
         >>> # ... later ...
         >>> watcher.stop()
@@ -49,12 +52,15 @@ class ConfigWatcher:
             config: The ScheduleConfig instance to update.
             source: Source mode - "file", "env", or "callback".
             file_path: Path to JSON config file (required for "file" mode).
-            callback: Callable returning config dict (required for "callback" mode).
+            callback: Callable returning config dict (required for
+                "callback" mode).
             poll_interval: Seconds between polls.
             cooldown: Minimum seconds between successive updates.
         """
         if source not in ("file", "env", "callback"):
-            raise ValueError(f"source must be 'file', 'env', or 'callback', got {source!r}")
+            raise ValueError(
+                f"source must be 'file', 'env', or 'callback', got {source!r}"
+            )
         if source == "file" and not file_path:
             raise ValueError("file_path is required for 'file' source")
         if source == "callback" and callback is None:
@@ -107,7 +113,11 @@ class ConfigWatcher:
         if not new_values:
             return False
 
-        filtered = {k: v for k, v in new_values.items() if k in _UPDATABLE_FIELDS}
+        filtered = {
+            k: v
+            for k, v in new_values.items()
+            if k in _UPDATABLE_FIELDS
+        }
         if not filtered:
             return False
 
@@ -147,7 +157,8 @@ class ConfigWatcher:
             return json.load(fh)
 
     def _read_env(self) -> Optional[dict[str, Any]]:
-        """Read config from environment variables with QREWARD_SCHEDULE_ prefix."""
+        """Read config from environment variables with QREWARD_SCHEDULE_
+        prefix."""
         result: dict[str, Any] = {}
         for key, value in os.environ.items():
             if not key.startswith(_ENV_PREFIX):
@@ -170,13 +181,14 @@ def _coerce_value(field_name: str, raw: str) -> Any:
     bool_fields = {"debug", "adaptive_limit"}
     int_fields = {
         "retry_times", "limit_size", "hedged_request_max_times",
-        "speed_up_max_multiply", "adaptive_limit_min", "adaptive_limit_max",
-        "priority",
+        "speed_up_max_multiply", "adaptive_limit_min",
+        "adaptive_limit_max", "priority",
     }
     float_fields = {
-        "timeout", "retry_interval", "limit_window", "hedged_request_time",
-        "hedged_request_proportion", "adaptive_error_threshold",
-        "adaptive_latency_threshold", "adaptive_window_seconds",
+        "timeout", "retry_interval", "limit_window",
+        "hedged_request_time", "hedged_request_proportion",
+        "adaptive_error_threshold", "adaptive_latency_threshold",
+        "adaptive_window_seconds",
     }
     if field_name in bool_fields:
         return raw.lower() in ("true", "1", "yes", "on")

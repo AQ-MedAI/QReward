@@ -25,9 +25,11 @@ class _PriorityEntry:
     the same priority level.
 
     Attributes:
-        effective_priority: Current priority (may be boosted by starvation protection).
+        effective_priority: Current priority (may be boosted by starvation
+            protection).
         sequence: Monotonically increasing counter for FIFO ordering.
-        enqueue_time: Timestamp when the entry was added (for starvation detection).
+        enqueue_time: Timestamp when the entry was added (for starvation
+            detection).
         item: The actual payload (excluded from ordering).
         cancelled: Whether this entry has been cancelled.
     """

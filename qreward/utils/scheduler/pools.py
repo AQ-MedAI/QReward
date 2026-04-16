@@ -100,7 +100,8 @@ class RunningTaskPool:
 
         Logic:
         1. If current task count is below threshold, allow execution
-        2. If historical max exceeds current value * multiply, system is overloaded
+        2. If historical max exceeds current value * multiply, system is
+            overloaded
 
         Args:
             multiply: Multiplier for load calculation

@@ -1,10 +1,11 @@
-"""Base runner implementing template method pattern for sync/async execution."""
+"""Base runner implementing template method pattern for sync/async
+execution."""
 
 import asyncio
 import concurrent.futures
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 from .config import ScheduleConfig, _sentinel_none
 from .context import ExecutionContext
@@ -69,7 +70,7 @@ class BaseRunner(ABC):
         config: ScheduleConfig,
         finished: Union[asyncio.Task, concurrent.futures.Future],
         can_add_speed_up: bool,
-    ) -> Tuple[bool, bool]:
+    ) -> tuple[bool, bool]:
         """Handle task exception.
 
         Args:

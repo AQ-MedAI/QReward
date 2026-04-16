@@ -3,10 +3,10 @@
 import concurrent.futures
 import logging
 import time
-from typing import Any, Callable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Optional, Sequence
 
 from .base import BaseRunner, _CancelledErrorGroups
-from .config import ScheduleConfig, _sentinel_none
+from .config import ScheduleConfig
 from .context import ExecutionContext
 
 logger = logging.getLogger(__name__)
@@ -21,9 +21,13 @@ class SyncRunner(BaseRunner):
 
     def __init__(self):
         super().__init__()
-        self._executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
+        self._executor: Optional[
+            concurrent.futures.ThreadPoolExecutor
+        ] = None
 
-    def set_executor(self, executor: concurrent.futures.ThreadPoolExecutor):
+    def set_executor(
+        self, executor: concurrent.futures.ThreadPoolExecutor
+    ):
         """Set the thread pool executor.
 
         Args:
@@ -31,13 +35,17 @@ class SyncRunner(BaseRunner):
         """
         self._executor = executor
 
-    def create_task(self, func: Callable, *args, **kwargs) -> concurrent.futures.Future:
+    def create_task(
+        self, func: Callable, *args, **kwargs
+    ) -> concurrent.futures.Future:
         """Create and submit a task to the executor."""
         if self._executor is None:
             raise RuntimeError("Executor not set")
         return self._executor.submit(func, *args, **kwargs)
 
-    def get_task_result(self, task: concurrent.futures.Future) -> Any:
+    def get_task_result(
+        self, task: concurrent.futures.Future
+    ) -> Any:
         """Get the result of a completed task."""
         return task.result()
 
@@ -47,7 +55,9 @@ class SyncRunner(BaseRunner):
         """Get the exception from a failed task, or None."""
         return task.exception()
 
-    def is_task_cancelled(self, task: concurrent.futures.Future) -> bool:
+    def is_task_cancelled(
+        self, task: concurrent.futures.Future
+    ) -> bool:
         """Check if a task was cancelled."""
         return task.cancelled()
 
@@ -94,19 +104,27 @@ class SyncRunner(BaseRunner):
             ):
                 # 1. Submit new tasks if allowed
                 if context.can_submit_task(len(run_tasks)):
-                    limiter_timeout = context.get_limiter_timeout(len(run_tasks))
+                    limiter_timeout = context.get_limiter_timeout(
+                        len(run_tasks)
+                    )
 
                     if not context.limiter or context.limiter.allow(
                         limiter_timeout if limiter_timeout > 0 else None
                     ):
-                        if context.is_hedge_submit(len(run_tasks)):  # pragma: no cover
+                        if context.is_hedge_submit(
+                            len(run_tasks)
+                        ):  # pragma: no cover
                             context.record_hedge()
-                        elif context.result_exception is not None:  # pragma: no cover
+                        elif (
+                            context.result_exception is not None
+                        ):  # pragma: no cover
                             context.record_exception(context.result_exception)
                             context.result_exception = None
 
                         run_tasks.append(
-                            self._executor.submit(context.func, *args, **kwargs)
+                            self._executor.submit(
+                                context.func, *args, **kwargs
+                            )
                         )
                         context.mark_task_submitted()
 

@@ -17,9 +17,15 @@ class OpenAIChatProxyManager:
     提供代理的增删查改、负载均衡和故障转移功能，支持链式调用。
 
     Example:
-        manager = OpenAIChatProxyManager(strategy=LoadBalanceStrategy.ROUND_ROBIN)
-        manager.add_proxy_with_default("key1", "http://api1.example.com", "sk-xxx")
-        manager.add_proxy_with_default("key2", "http://api2.example.com", "sk-yyy")
+        manager = OpenAIChatProxyManager(
+            strategy=LoadBalanceStrategy.ROUND_ROBIN
+        )
+        manager.add_proxy_with_default(
+            "key1", "http://api1.example.com", "sk-xxx"
+        )
+        manager.add_proxy_with_default(
+            "key2", "http://api2.example.com", "sk-yyy"
+        )
         proxy = manager.select_proxy()  # round-robin selection
     """
 
@@ -256,7 +262,11 @@ class OpenAIChatProxyManager:
         """
         with self._health_lock:
             healthy_snapshot = set(self._healthy_keys)
-        return {k: v for k, v in self._proxies.items() if k in healthy_snapshot}
+        return {
+            k: v
+            for k, v in self._proxies.items()
+            if k in healthy_snapshot
+        }
 
     async def remove_proxy(self, key: str) -> None:
         """移除并关闭指定 key 的代理。
@@ -275,8 +285,10 @@ class OpenAIChatProxyManager:
             await proxy.client.close()
 
     async def batch_stream_chat_completion(
-        self, batch_messages: list[list[dict[str, Any]]],
-        model: str, **kwargs: Any,
+        self,
+        batch_messages: list[list[dict[str, Any]]],
+        model: str,
+        **kwargs: Any,
     ) -> "AsyncIterator[tuple[int, str]]":
         """通过负载均衡选择代理并执行批量流式聊天补全。"""
         proxy = self.select_proxy(model=model)

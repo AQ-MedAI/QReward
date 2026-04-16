@@ -5,15 +5,16 @@ import concurrent.futures
 import functools
 import inspect
 import threading
-import time
-from typing import Any, Callable, List, Optional, Tuple, Type, Union
+from typing import (
+    Any, Callable, List, Optional, Tuple, Type, Union,
+)
 
 from .adaptive_limiter import AdaptiveRateLimiter
 from .async_runner import AsyncRunner
 from .circuit_breaker import CircuitBreaker
-from .sync_runner import SyncRunner
 from .config import ScheduleConfig, _sentinel_none
 from .context import ExecutionContext
+from .sync_runner import SyncRunner
 from .limiter import LimiterPool
 from .metrics import ScheduleMetrics
 from .pools import RunningTaskPool
@@ -38,7 +39,9 @@ def _shutdown_executors() -> None:
         _executor_registry.clear()
 
 
-def _register_executor(executor: concurrent.futures.ThreadPoolExecutor) -> None:
+def _register_executor(
+    executor: concurrent.futures.ThreadPoolExecutor
+) -> None:
     """Register a ThreadPoolExecutor for cleanup at process exit.
 
     Args:
@@ -81,7 +84,8 @@ def schedule(
     priority: int = 5,
     telemetry_exporter: Optional[TelemetryExporter] = None,
 ):
-    """Decorator for scheduling function execution with retry, hedging, rate limiting, etc.
+    """Decorator for scheduling function execution with retry, hedging,
+    rate limiting, etc.
 
     Args:
         timeout: Timeout in seconds, 0 means no timeout
@@ -186,7 +190,9 @@ def schedule(
                     )
 
                 # Create context
-                context = ExecutionContext(func, config, key, running_task, limiter)
+                context = ExecutionContext(
+                    func, config, key, running_task, limiter
+                )
                 running_task.add(1)
 
                 # Execute
@@ -250,10 +256,14 @@ def schedule(
 
                 # Create context and execute with shared executor
                 runner.set_executor(executor)
-                context = ExecutionContext(func, config, key, running_task, limiter)
+                context = ExecutionContext(
+                    func, config, key, running_task, limiter
+                )
                 running_task.add(1)
 
-                result = runner.execute_impl(context, config, *args, **kwargs)
+                result = runner.execute_impl(
+                    context, config, *args, **kwargs
+                )
 
                 # Record to adaptive limiter
                 if adaptive_limiter is not None:

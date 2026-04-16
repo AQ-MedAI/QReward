@@ -2,10 +2,10 @@
 
 import asyncio
 import logging
-from typing import Any, Callable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Optional, Sequence
 
 from .base import BaseRunner, _CancelledErrorGroups
-from .config import ScheduleConfig, _sentinel_none
+from .config import ScheduleConfig
 from .context import ExecutionContext
 
 logger = logging.getLogger(__name__)
@@ -14,19 +14,27 @@ logger = logging.getLogger(__name__)
 class AsyncRunner(BaseRunner):
     """Async runner implementation."""
 
-    def create_task(self, func: Callable, *args, **kwargs) -> asyncio.Task:
+    def create_task(
+        self, func: Callable, *args, **kwargs
+    ) -> asyncio.Task:
         """Create an asyncio task."""
         return asyncio.create_task(func(*args, **kwargs))
 
-    def get_task_result(self, task: asyncio.Task) -> Any:
+    def get_task_result(
+        self, task: asyncio.Task
+    ) -> Any:
         """Get result from a completed asyncio task."""
         return task.result()
 
-    def get_task_exception(self, task: asyncio.Task) -> Optional[BaseException]:
+    def get_task_exception(
+        self, task: asyncio.Task
+    ) -> Optional[BaseException]:
         """Get exception from a completed asyncio task."""
         return task.exception()
 
-    def is_task_cancelled(self, task: asyncio.Task) -> bool:
+    def is_task_cancelled(
+        self, task: asyncio.Task
+    ) -> bool:
         """Check if an asyncio task was cancelled."""
         return task.cancelled()
 
@@ -87,14 +95,22 @@ class AsyncRunner(BaseRunner):
             ):
                 # 1. Submit new tasks if allowed
                 if context.can_submit_task(len(run_tasks)):
-                    limiter_timeout = context.get_limiter_timeout(len(run_tasks))
+                    limiter_timeout = context.get_limiter_timeout(
+                        len(run_tasks)
+                    )
 
-                    if not context.limiter or await context.limiter.async_allow(
-                        limiter_timeout if limiter_timeout > 0 else None
+                    if not context.limiter or await (
+                        context.limiter.async_allow(
+                            limiter_timeout if limiter_timeout > 0 else None
+                        )
                     ):
-                        if context.is_hedge_submit(len(run_tasks)):  # pragma: no cover
+                        if context.is_hedge_submit(
+                            len(run_tasks)
+                        ):  # pragma: no cover
                             context.record_hedge()
-                        elif context.result_exception is not None:  # pragma: no cover
+                        elif (
+                            context.result_exception is not None
+                        ):  # pragma: no cover
                             context.record_exception(context.result_exception)
                             context.result_exception = None
 

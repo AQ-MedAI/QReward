@@ -24,7 +24,9 @@ class RoundRobinSelector:
         self._lock = threading.Lock()
 
     def select(
-        self, keys: List[str], healthy_keys: set[str]
+        self,
+        keys: List[str],
+        healthy_keys: set[str],
     ) -> Optional[str]:
         """Select the next healthy key in round-robin order.
 

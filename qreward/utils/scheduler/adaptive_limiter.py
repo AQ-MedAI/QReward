@@ -1,11 +1,11 @@
-"""Adaptive rate limiter that dynamically adjusts throughput based on error rate and latency."""
+"""Adaptive rate limiter that dynamically adjusts throughput based on
+error rate and latency."""
 
 import logging
 import threading
 import time
 from collections import deque
 from dataclasses import dataclass
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,8 @@ class AdaptiveRateLimiter:
             limit_min: Floor for the rate limit.
             limit_max: Ceiling for the rate limit.
             error_threshold: Error rate (0-1) above which to slow down.
-            latency_threshold: Average latency (seconds) above which to slow down.
+            latency_threshold: Average latency (seconds) above which to
+                slow down.
             window_seconds: Sliding window duration for statistics.
             slowdown_factor: Multiplier applied on slowdown (< 1).
             speedup_factor: Multiplier applied on speedup (> 1).
@@ -73,7 +74,9 @@ class AdaptiveRateLimiter:
         if not (0 < error_threshold <= 1):
             raise ValueError("error_threshold must be in (0, 1]")
 
-        self._current_limit = float(max(limit_min, min(initial_limit, limit_max)))
+        self._current_limit = float(
+            max(limit_min, min(initial_limit, limit_max))
+        )
         self._limit_min = limit_min
         self._limit_max = limit_max
         self._error_threshold = error_threshold
@@ -116,7 +119,8 @@ class AdaptiveRateLimiter:
             self._records.popleft()
 
     def _maybe_adjust(self, now: float) -> None:
-        """Evaluate metrics and adjust limit if cooldown has elapsed. Must hold lock."""
+        """Evaluate metrics and adjust limit if cooldown has elapsed.
+        Must hold lock."""
         if now - self._last_adjust_time < self._cooldown_seconds:
             return
 
@@ -124,7 +128,9 @@ class AdaptiveRateLimiter:
         if total == 0:
             return
 
-        failures = sum(1 for record in self._records if not record.success)
+        failures = sum(
+            1 for record in self._records if not record.success
+        )
         error_rate = failures / total
         avg_latency = (
             sum(record.latency_seconds for record in self._records) / total
@@ -132,7 +138,10 @@ class AdaptiveRateLimiter:
 
         previous_limit = self._current_limit
 
-        if error_rate > self._error_threshold or avg_latency > self._latency_threshold:
+        if (
+            error_rate > self._error_threshold
+            or avg_latency > self._latency_threshold
+        ):
             self._current_limit = max(
                 self._limit_min, self._current_limit * self._slowdown_factor
             )
@@ -156,7 +165,8 @@ class AdaptiveRateLimiter:
         """Return a snapshot of current statistics.
 
         Returns:
-            Dict with current_limit, total_records, error_rate, avg_latency.
+            Dict with current_limit, total_records, error_rate,
+            avg_latency.
         """
         with self._lock:
             total = len(self._records)
@@ -167,7 +177,9 @@ class AdaptiveRateLimiter:
                     "error_rate": 0.0,
                     "avg_latency": 0.0,
                 }
-            failures = sum(1 for record in self._records if not record.success)
+            failures = sum(
+                1 for record in self._records if not record.success
+            )
             avg_latency = (
                 sum(record.latency_seconds for record in self._records) / total
             )

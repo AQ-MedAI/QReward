@@ -1,8 +1,9 @@
 """ROLL Framework Integration — LLM-as-Judge Reward with QReward
 
-This module provides a custom Reward Worker for the ROLL (Reinforcement Learning
-Optimization for Large-Scale Learning) framework. It uses QReward's OpenAIChatProxy
-to efficiently call a remote LLM Judge API for reward computation.
+This module provides a custom Reward Worker for the ROLL (Reinforcement
+Learning Optimization for Large-Scale Learning) framework. It uses QReward's
+OpenAIChatProxy to efficiently call a remote LLM Judge API for reward
+computation.
 
 When to use this instead of ROLL's built-in LLMJudgeRewardWorker:
   - Your Judge model is deployed as a remote OpenAI-compatible API service
@@ -37,7 +38,11 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from qreward.client import OpenAIChatProxy, OpenAIChatProxyManager, LoadBalanceStrategy
+from qreward.client import (
+    OpenAIChatProxy,
+    OpenAIChatProxyManager,
+    LoadBalanceStrategy,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -150,23 +155,33 @@ class RewardCalculator:
         while remaining > 0:
             try:
                 if isinstance(messages, list):
-                    dialogue = self.convert_messages_to_dialogue(messages)
+                    dialogue = self.convert_messages_to_dialogue(
+                        messages
+                    )
                 elif isinstance(messages, str):
                     dialogue = messages
                 else:
-                    raise TypeError(f"Expected list or str, got {type(messages)}")
+                    raise TypeError(
+                        f"Expected list or str, got {type(messages)}"
+                    )
 
                 think, response = await self.call_judge_model(
-                    messages=[{"role": "user", "content": dialogue}],
+                    messages=[
+                        {"role": "user", "content": dialogue}
+                    ],
                 )
 
                 parsed = json.loads(
                     response.replace("json", "").replace("```", "")
                 )
-                score_list = [item["score"] for item in parsed.values()]
+                score_list = [
+                    item["score"] for item in parsed.values()
+                ]
 
                 # Example scoring formula — customize for your task
-                return score_list[0] / 4 + score_list[1] / 2 + score_list[2] / 10
+                return (
+                    score_list[0] / 4 + score_list[1] / 2 + score_list[2] / 10
+                )
             except Exception as exc:
                 remaining -= 1
                 logger.warning(
@@ -217,15 +232,21 @@ class QRewardLLMJudgeWorker:
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self._config = config or {}
 
-        base_url = os.getenv("OPENAI_API_BASE", "http://localhost:8000/v1")
+        base_url = os.getenv(
+            "OPENAI_API_BASE", "http://localhost:8000/v1"
+        )
         api_key = os.getenv("OPENAI_API_KEY", "")
         judge_model = os.getenv("JUDGE_MODEL", "DeepSeek-R1")
         max_concurrent = int(os.getenv("JUDGE_MAX_CONCURRENT", "64"))
 
         extra_urls_raw = os.getenv("JUDGE_EXTRA_URLS", "")
-        extra_urls = [u.strip() for u in extra_urls_raw.split(",") if u.strip()]
+        extra_urls = [
+            u.strip() for u in extra_urls_raw.split(",") if u.strip()
+        ]
         extra_keys_raw = os.getenv("JUDGE_EXTRA_KEYS", "")
-        extra_keys = [k.strip() for k in extra_keys_raw.split(",") if k.strip()] or None
+        extra_keys = [
+            k.strip() for k in extra_keys_raw.split(",") if k.strip()
+        ] or None
 
         self._calculator = RewardCalculator(
             base_url=base_url,

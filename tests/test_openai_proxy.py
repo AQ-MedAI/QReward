@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from qreward.client import (
@@ -9,7 +8,10 @@ from qreward.client import (
 )
 
 
-from tests.conftest import TEST_BASE_URL as TEST_URL, TEST_API_KEY
+from tests.conftest import (
+    TEST_BASE_URL as TEST_URL,
+    TEST_API_KEY,
+)
 
 
 def test_get_openai_key_env(monkeypatch):
@@ -25,12 +27,9 @@ def test_with_methods(proxy):
     def dummy_error_func(e):
         return str(e)
 
-    assert (
-        proxy.with_error_process_func(
-            error_process_func=dummy_error_func,
-        )._default_error_process_func
-        == dummy_error_func
-    )
+    assert proxy.with_error_process_func(
+        error_process_func=dummy_error_func,
+    )._default_error_process_func == dummy_error_func
 
 
 def test_httpx_add_hook():
@@ -158,8 +157,14 @@ async def test_embeddings_debug_print(caplog):
         await proxy.embeddings(sentences=["hello"], model="embedding-model")
 
     debug_records = [r for r in caplog.records if r.levelno == logging.DEBUG]
-    assert any("Begin" in r.message and "embedding-model" in r.message for r in debug_records)
-    assert any("End" in r.message and "embedding-model" in r.message for r in debug_records)
+    assert any(
+        "Begin" in r.message and "embedding-model" in r.message
+        for r in debug_records
+    )
+    assert any(
+        "End" in r.message and "embedding-model" in r.message
+        for r in debug_records
+    )
 
 
 @pytest.mark.asyncio
@@ -202,7 +207,9 @@ async def test_chat_completion_debug_print(caplog):
         # 构造一个假的 ChatCompletion 响应
         completion_mock = type("MockCompletion", (), {})()
         completion_mock.choices = [
-            type("Choice", (), {"message": type("Msg", (), {"content": "Hi"})()})()
+            type("Choice", (), {
+                "message": type("Msg", (), {"content": "Hi"})()
+            })()
         ]
 
         proxy.client.chat.completions.create = AsyncMock(
@@ -215,8 +222,14 @@ async def test_chat_completion_debug_print(caplog):
         assert result == "Hi"
 
     debug_records = [r for r in caplog.records if r.levelno == logging.DEBUG]
-    assert any("Begin" in r.message and "test-model" in r.message for r in debug_records)
-    assert any("End" in r.message and "test-model" in r.message for r in debug_records)
+    assert any(
+        "Begin" in r.message and "test-model" in r.message
+        for r in debug_records
+    )
+    assert any(
+        "End" in r.message and "test-model" in r.message
+        for r in debug_records
+    )
 
 
 @pytest.mark.asyncio
@@ -243,7 +256,8 @@ async def test_batch_chat_completion_error_process():
 
     # 调用 batch_chat_completion
     results = await proxy.batch_chat_completion(
-        batch_messages=batch_messages, model="gpt-test"
+        batch_messages=batch_messages,
+        model="gpt-test",
     )
 
     # 验证结果是 error_process_fuc 处理过的字符串
@@ -291,8 +305,13 @@ async def test_embeddings_retry_on_api_error(proxy, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_embeddings_propagates_non_retryable_exception(proxy, monkeypatch):
-    """验证 embeddings 方法对非 _ERROR_GROUP 异常直接抛出，不再静默返回 []。"""
+async def test_embeddings_propagates_non_retryable_exception(
+    proxy,
+    monkeypatch
+):
+    """验证 embeddings 方法对非 _ERROR_GROUP 异常直接抛出，
+    不再静默返回 []。
+    """
 
     async def fake_create(*args, **kwargs):
         raise ValueError("unexpected error")
@@ -361,7 +380,8 @@ async def test_batch_chat_completion_error_process_with_return_exceptions():
 
     batch_messages = [[{"role": "user", "content": "Hello"}]]
     results = await proxy.batch_chat_completion(
-        batch_messages=batch_messages, model="gpt-test"
+        batch_messages=batch_messages,
+        model="gpt-test",
     )
 
     assert len(results) == 1
@@ -446,7 +466,7 @@ async def test_add_proxy_with_default_and_batch(monkeypatch):
 # Sprint 4: batch exception logging + lazy patch tests
 # ============================================================
 
-import logging
+import logging  # noqa: E402
 
 
 @pytest.mark.asyncio
@@ -494,7 +514,6 @@ async def test_batch_chat_completion_exception_logging(caplog):
 def test_patch_httpx_not_called_on_import():
     """Verify importing qreward.client.openai does not trigger patch_httpx()
     at module level — patch is deferred to OpenAIChatProxy.__init__."""
-    import importlib
     import qreward.client.openai as openai_mod
 
     with patch.object(openai_mod, "patch_httpx") as mock_patch:
@@ -523,7 +542,8 @@ def test_default_max_retries():
 
 
 def test_verify_ssl_configurable():
-    """Verify verify_ssl parameter is passed through to _default_http_client."""
+    """Verify verify_ssl parameter is passed through to
+    _default_http_client."""
     # Patch _default_http_client to capture the verify argument
     captured_args = {}
     original_method = OpenAIChatProxy._default_http_client
@@ -532,14 +552,22 @@ def test_verify_ssl_configurable():
         captured_args.update(kwargs)
         return original_method(self, **kwargs)
 
-    with patch.object(OpenAIChatProxy, "_default_http_client", spy_http_client):
+    with patch.object(
+        OpenAIChatProxy,
+        "_default_http_client",
+        spy_http_client,
+    ):
         # Default: verify_ssl=False
         OpenAIChatProxy(base_url=TEST_URL, api_key=TEST_API_KEY)
         assert captured_args.get("verify") is False
 
         # Explicit: verify_ssl=True
         captured_args.clear()
-        OpenAIChatProxy(base_url=TEST_URL, api_key=TEST_API_KEY, verify_ssl=True)
+        OpenAIChatProxy(
+            base_url=TEST_URL,
+            api_key=TEST_API_KEY,
+            verify_ssl=True,
+        )
         assert captured_args.get("verify") is True
 
 
@@ -586,15 +614,26 @@ async def test_debug_uses_logger(caplog):
             new_callable=AsyncMock,
             return_value=mock_completion,
         ):
-            await proxy.chat_completion(model="test-model", messages=[{"role": "user", "content": "hi"}])
+            await proxy.chat_completion(
+                model="test-model",
+                messages=[{"role": "user", "content": "hi"}],
+            )
 
     debug_records = [r for r in caplog.records if r.levelno == logging.DEBUG]
-    assert any("Begin" in r.message and "test-model" in r.message for r in debug_records)
-    assert any("End" in r.message and "test-model" in r.message for r in debug_records)
+    assert any(
+        "Begin" in r.message and "test-model" in r.message
+        for r in debug_records
+    )
+    assert any(
+        "End" in r.message and "test-model" in r.message
+        for r in debug_records
+    )
+
 
 @pytest.mark.asyncio
 async def test_new_param_names():
-    """M-VERIFY-1: New parameter names chat_process_func and error_process_func work."""
+    """M-VERIFY-1: New parameter names chat_process_func and
+    error_process_func work."""
     def my_chat_func(resp):
         return resp
 
@@ -610,8 +649,10 @@ async def test_new_param_names():
     assert proxy._default_chat_process_func == my_chat_func
     assert proxy._default_error_process_func == my_error_func
 
+
 def test_deprecated_param_names():
-    """M-VERIFY-2: Old parameter names still work but trigger DeprecationWarning."""
+    """M-VERIFY-2: Old parameter names still work but trigger
+    DeprecationWarning."""
     import warnings
 
     def my_chat_func(resp):
@@ -629,7 +670,10 @@ def test_deprecated_param_names():
             error_process_fuc=my_error_func,
         )
 
-    deprecation_messages = [str(w.message) for w in caught if issubclass(w.category, DeprecationWarning)]
+    deprecation_messages = [
+        str(w.message) for w in caught
+        if issubclass(w.category, DeprecationWarning)
+    ]
     assert any("chat_process_fuc" in m for m in deprecation_messages)
     assert any("error_process_fuc" in m for m in deprecation_messages)
     assert proxy._default_chat_process_func == my_chat_func
@@ -649,13 +693,22 @@ def test_round_robin_selection(monkeypatch):
         or setattr(self, "client", MagicMock()),
     )
 
-    manager = OpenAIChatProxyManager(strategy=LoadBalanceStrategy.ROUND_ROBIN)
+    manager = OpenAIChatProxyManager(
+        strategy=LoadBalanceStrategy.ROUND_ROBIN,
+    )
     manager.add_proxy_with_default("a", "http://a", "sk-a")
     manager.add_proxy_with_default("b", "http://b", "sk-b")
     manager.add_proxy_with_default("c", "http://c", "sk-c")
 
     selected = [manager.select_proxy()._base_url for _ in range(6)]
-    assert selected == ["http://a", "http://b", "http://c", "http://a", "http://b", "http://c"]
+    assert selected == [
+        "http://a",
+        "http://b",
+        "http://c",
+        "http://a",
+        "http://b",
+        "http://c",
+    ]
 
 
 def test_skip_unhealthy_proxy(monkeypatch):
@@ -666,7 +719,9 @@ def test_skip_unhealthy_proxy(monkeypatch):
         or setattr(self, "client", MagicMock()),
     )
 
-    manager = OpenAIChatProxyManager(strategy=LoadBalanceStrategy.ROUND_ROBIN)
+    manager = OpenAIChatProxyManager(
+        strategy=LoadBalanceStrategy.ROUND_ROBIN,
+    )
     manager.add_proxy_with_default("a", "http://a", "sk-a")
     manager.add_proxy_with_default("b", "http://b", "sk-b")
     manager.add_proxy_with_default("c", "http://c", "sk-c")
@@ -679,7 +734,8 @@ def test_skip_unhealthy_proxy(monkeypatch):
 
 
 def test_all_unhealthy_raises(monkeypatch):
-    """M-VERIFY-3: All proxies unhealthy -> select_proxy raises RuntimeError."""
+    """M-VERIFY-3: All proxies unhealthy -> select_proxy raises
+    RuntimeError."""
     monkeypatch.setattr(
         "qreward.client.manager.OpenAIChatProxy.__init__",
         lambda self, **kw: setattr(self, "_base_url", kw.get("base_url", ""))
@@ -693,7 +749,10 @@ def test_all_unhealthy_raises(monkeypatch):
     manager.mark_unhealthy("a")
     manager.mark_unhealthy("b")
 
-    with pytest.raises(RuntimeError, match="No healthy proxy available"):
+    with pytest.raises(
+        RuntimeError,
+        match="No healthy proxy available",
+    ):
         manager.select_proxy()
 
 
@@ -746,7 +805,9 @@ def test_weighted_round_robin_selection(monkeypatch):
         or setattr(self, "client", MagicMock()),
     )
 
-    manager = OpenAIChatProxyManager(strategy=LoadBalanceStrategy.WEIGHTED_ROUND_ROBIN)
+    manager = OpenAIChatProxyManager(
+        strategy=LoadBalanceStrategy.WEIGHTED_ROUND_ROBIN,
+    )
     proxy_a = OpenAIChatProxy(base_url="http://a", api_key="sk-a")
     proxy_b = OpenAIChatProxy(base_url="http://b", api_key="sk-b")
     manager.add_proxy("a", proxy_a, weight=3)
@@ -813,8 +874,12 @@ def test_manager_default_strategy():
 def test_load_balance_strategy_values():
     """LoadBalanceStrategy enum has expected values."""
     assert LoadBalanceStrategy.ROUND_ROBIN.value == "round_robin"
-    assert LoadBalanceStrategy.WEIGHTED_ROUND_ROBIN.value == "weighted_round_robin"
-    assert LoadBalanceStrategy.LEAST_CONNECTIONS.value == "least_connections"
+    assert LoadBalanceStrategy.WEIGHTED_ROUND_ROBIN.value == (
+        "weighted_round_robin"
+    )
+    assert LoadBalanceStrategy.LEAST_CONNECTIONS.value == (
+        "least_connections"
+    )
 
 
 # ============================================================
@@ -824,7 +889,8 @@ def test_load_balance_strategy_values():
 
 @pytest.mark.asyncio
 async def test_stream_chat_completion(proxy):
-    """M-VERIFY-1: stream_chat_completion returns AsyncIterator of str chunks."""
+    """M-VERIFY-1: stream_chat_completion returns AsyncIterator of str
+    chunks."""
 
     class MockDelta:
         def __init__(self, content):
@@ -877,10 +943,13 @@ async def test_stream_error_handling(proxy):
     """M-VERIFY-2: Errors during streaming are properly propagated."""
 
     proxy.client.chat.completions.create = AsyncMock(
-        side_effect=Exception("stream connection failed")
+        side_effect=Exception("stream connection failed"),
     )
 
-    with pytest.raises(Exception, match="stream connection failed"):
+    with pytest.raises(
+        Exception,
+        match="stream connection failed",
+    ):
         async for _ in proxy.stream_chat_completion(
             messages=[{"role": "user", "content": "hi"}],
             model="gpt-test",
@@ -928,7 +997,10 @@ async def test_stream_chat_completion_with_debug(proxy, caplog):
         return_value=MockStream([MockChunk("ok")])
     )
 
-    with caplog.at_level(logging.DEBUG, logger="qreward.client.openai"):
+    with caplog.at_level(
+        logging.DEBUG,
+        logger="qreward.client.openai",
+    ):
         collected = []
         async for token in proxy.stream_chat_completion(
             messages=[{"role": "user", "content": "hi"}],
@@ -978,9 +1050,14 @@ async def test_stream_skips_empty_chunks(proxy):
         async def close(self):
             pass
 
-    chunks = [MockChunk("Hi"), MockEmptyChunk(), MockChunk(None), MockChunk("!")]
+    chunks = [
+        MockChunk("Hi"),
+        MockEmptyChunk(),
+        MockChunk(None),
+        MockChunk("!"),
+    ]
     proxy.client.chat.completions.create = AsyncMock(
-        return_value=MockStream(chunks)
+        return_value=MockStream(chunks),
     )
 
     collected = []
@@ -997,12 +1074,15 @@ async def test_stream_skips_empty_chunks(proxy):
 # Sprint 16: Model Router Tests
 # ============================================================
 
-from qreward.client.model_router import ModelRouter
-from qreward.client.load_balancer import LoadBalanceStrategy
+from qreward.client.model_router import ModelRouter  # noqa: E402
+from qreward.client.load_balancer import (  # noqa: E402, F811
+    LoadBalanceStrategy
+)
 
 
 def test_model_router_basic():
-    """M-VERIFY-1: select_proxy routes by model name."""
+    """M-VERIFY-1: select_proxy routes by model name.
+    """
     proxy_a = MagicMock(spec=OpenAIChatProxy)
     proxy_b = MagicMock(spec=OpenAIChatProxy)
 
@@ -1052,7 +1132,10 @@ def test_model_router_independent_health():
     manager._model_router.mark_unhealthy("gpt-4", "gpt4_p1")
 
     # gpt-4 group has no healthy proxy
-    with pytest.raises(RuntimeError, match="No healthy proxy"):
+    with pytest.raises(
+        RuntimeError,
+        match="No healthy proxy",
+    ):
         manager.select_proxy(model="gpt-4")
 
     # Default pool still works
@@ -1130,7 +1213,11 @@ async def test_batch_stream_chat_completion():
         for tok in ["hello", " ", "world"]:
             yield tok
 
-    with patch.object(proxy, "stream_chat_completion", side_effect=fake_stream):
+    with patch.object(
+        proxy,
+        "stream_chat_completion",
+        side_effect=fake_stream,
+    ):
         results = []
         async for idx, token in proxy.batch_stream_chat_completion(
             [
@@ -1164,7 +1251,11 @@ async def test_batch_stream_partial_failure():
         for tok in ["ok"]:
             yield tok
 
-    with patch.object(proxy, "stream_chat_completion", side_effect=fake_stream):
+    with patch.object(
+        proxy,
+        "stream_chat_completion",
+        side_effect=fake_stream,
+    ):
         results = []
         async for idx, token in proxy.batch_stream_chat_completion(
             [

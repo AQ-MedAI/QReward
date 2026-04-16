@@ -57,7 +57,8 @@ def retry(
                 return False
         elif not isinstance(
             exception,
-            tuple(retry_on) if isinstance(retry_on, (list, tuple)) else (retry_on,),
+            tuple(retry_on) if isinstance(retry_on, (list, tuple))
+            else (retry_on,),
         ):
             return False
 

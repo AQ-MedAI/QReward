@@ -1,4 +1,5 @@
-"""Execution context for managing state during a single schedule invocation."""
+"""Execution context for managing state during a single schedule
+invocation."""
 
 import time
 from typing import Any, Callable, List, Optional
@@ -9,7 +10,9 @@ from .metrics import ScheduleMetrics
 from .pools import RunningTaskPool
 
 # Exponent base and step for hedged request threshold calculation:
-#   threshold = pool_size + multiply ** (HEDGE_EXPONENT_BASE + times * HEDGE_EXPONENT_STEP)
+#   threshold = pool_size + multiply ** (
+#       HEDGE_EXPONENT_BASE + times * HEDGE_EXPONENT_STEP
+#   )
 HEDGE_EXPONENT_BASE = 0.5
 HEDGE_EXPONENT_STEP = 0.5
 
@@ -77,7 +80,9 @@ class ExecutionContext:
 
         # Allow if under speed up multiplier
         if run_tasks_count < self.cur_speed_up_multiply:
-            if self.running_task_pool.can_submit(run_tasks_count + 1):
+            if self.running_task_pool.can_submit(
+                run_tasks_count + 1
+            ):
                 return True
 
         # Allow hedged request
@@ -98,18 +103,25 @@ class ExecutionContext:
         if self.config.hedged_request_time <= 0:
             return False
 
-        if self.cur_hedged_request_times > self.config.hedged_request_max_times:
+        if self.cur_hedged_request_times > (
+            self.config.hedged_request_max_times
+        ):
             return False
 
-        time_since_last = time.perf_counter() - self.last_submit_time
+        time_since_last = (
+            time.perf_counter() - self.last_submit_time
+        )
         if not (
             self.config.hedged_request_time < time_since_last
             or self.cur_hedged_request_times > 1
         ):
             return False
 
-        threshold = run_tasks_count + self.config.hedged_request_multiply ** (
-            HEDGE_EXPONENT_BASE + self.cur_hedged_request_times * HEDGE_EXPONENT_STEP
+        threshold = run_tasks_count + (
+            self.config.hedged_request_multiply ** (
+                HEDGE_EXPONENT_BASE
+                + self.cur_hedged_request_times * HEDGE_EXPONENT_STEP
+            )
         )
         return self.running_task_pool.can_submit(threshold)
 
@@ -128,18 +140,25 @@ class ExecutionContext:
         if self.cur_speed_up_multiply > run_tasks_count:
             return False
 
-        time_since_last = time.perf_counter() - self.last_submit_time
+        time_since_last = (
+            time.perf_counter() - self.last_submit_time
+        )
         if not (
             self.config.hedged_request_time < time_since_last
             or self.cur_hedged_request_times > 1
         ):
             return False
 
-        if self.cur_hedged_request_times > self.config.hedged_request_max_times:
+        if self.cur_hedged_request_times > (
+            self.config.hedged_request_max_times
+        ):
             return False
 
-        threshold = run_tasks_count + self.config.hedged_request_multiply ** (
-            HEDGE_EXPONENT_BASE + self.cur_hedged_request_times * HEDGE_EXPONENT_STEP
+        threshold = run_tasks_count + (
+            self.config.hedged_request_multiply ** (
+                HEDGE_EXPONENT_BASE
+                + self.cur_hedged_request_times * HEDGE_EXPONENT_STEP
+            )
         )
         return self.running_task_pool.can_submit(threshold)
 
@@ -156,15 +175,22 @@ class ExecutionContext:
 
         # Base timeout
         if self.config.timeout > 0:
-            cur_timeout = self.start_time + self.config.timeout - time.perf_counter()
+            cur_timeout = (
+                self.start_time
+                + self.config.timeout
+                - time.perf_counter()
+            )
 
         # Hedge request timeout
         if (
-            self.cur_hedged_request_times <= self.config.hedged_request_max_times
+            self.cur_hedged_request_times
+            <= self.config.hedged_request_max_times
             and self.config.hedged_request_time > 0
         ):
             hedge_timeout = (
-                self.start_time + self.config.hedged_request_time - time.perf_counter()
+                self.start_time
+                + self.config.hedged_request_time
+                - time.perf_counter()
             )
             if cur_timeout == 0 or hedge_timeout < cur_timeout:
                 cur_timeout = hedge_timeout
@@ -172,7 +198,10 @@ class ExecutionContext:
         # Speed up timeout (retry_interval)
         if run_tasks_count < self.cur_speed_up_multiply:
             if self.cur_times < self.config.retry_times:
-                if cur_timeout > self.config.retry_interval or cur_timeout == 0:
+                if (
+                    cur_timeout > self.config.retry_interval
+                    or cur_timeout == 0
+                ):
                     cur_timeout = self.config.retry_interval
 
         if cur_timeout < 0:
@@ -191,14 +220,19 @@ class ExecutionContext:
         """
         if run_tasks_count == 0:
             if self.config.timeout > 0:
-                return max(MIN_LIMITER_TIMEOUT, self.config.timeout - self.elapsed)
+                return max(
+                    MIN_LIMITER_TIMEOUT,
+                    self.config.timeout - self.elapsed
+                )
             return 0
 
         cur_timeout = self.config.retry_interval
         if self.config.timeout > 0:
             remaining = self.config.timeout - self.elapsed
             if remaining < self.config.retry_interval:
-                cur_timeout = max(MIN_LIMITER_TIMEOUT, remaining)
+                cur_timeout = max(
+                    MIN_LIMITER_TIMEOUT, remaining
+                )
         return cur_timeout
 
     @property

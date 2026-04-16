@@ -75,16 +75,18 @@ class OpenAIChatProxy:
         # Handle deprecated parameters
         if chat_process_fuc is not None:
             warnings.warn(
-                "chat_process_fuc is deprecated, use chat_process_func instead",
+                "chat_process_fuc is deprecated, use "
+                "chat_process_func instead",
                 DeprecationWarning,
                 stacklevel=2,
             )
             if chat_process_func is None:
                 chat_process_func = chat_process_fuc
-        
+
         if error_process_fuc is not None:
             warnings.warn(
-                "error_process_fuc is deprecated, use error_process_func instead",
+                "error_process_fuc is deprecated, use "
+                "error_process_func instead",
                 DeprecationWarning,
                 stacklevel=2,
             )
@@ -176,7 +178,8 @@ class OpenAIChatProxy:
 
     def with_error_process_fuc(self, error_process_fuc: Callable):
         warnings.warn(
-            "with_error_process_fuc is deprecated, use with_error_process_func instead",
+            "with_error_process_fuc is deprecated, use "
+            "with_error_process_func instead",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -200,7 +203,11 @@ class OpenAIChatProxy:
     ) -> str:
         """调用 OpenAI Chat 接口。"""
         if self.debug:
-            logger.debug("[time: %s] - [Begin] - Call model: %s", datetime.now(), model)
+            logger.debug(
+                "[time: %s] - [Begin] - Call model: %s",
+                datetime.now(),
+                model,
+            )
 
         async with self.semaphore, self.rate_limiter:
             completion: ChatCompletion = await asyncio.wait_for(
@@ -282,25 +289,38 @@ class OpenAIChatProxy:
             每个 chunk 的文本内容
         """
         if self.debug:
-            logger.debug("[time: %s] - [Begin] - Stream model: %s", datetime.now(), model)
+            logger.debug(
+                "[time: %s] - [Begin] - Stream model: %s",
+                datetime.now(),
+                model,
+            )
 
         async with self.semaphore, self.rate_limiter:
             stream = await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=kwargs.get("temperature", self._default_temperature),
+                temperature=kwargs.get(
+                    "temperature", self._default_temperature
+                ),
                 stream=True,
                 timeout=kwargs.get("timeout", self._default_timeout),
             )
             try:
                 async for chunk in stream:
-                    if chunk.choices and chunk.choices[0].delta.content is not None:
+                    if (
+                        chunk.choices
+                        and chunk.choices[0].delta.content is not None
+                    ):
                         yield chunk.choices[0].delta.content
             finally:
                 await stream.close()
 
         if self.debug:
-            logger.debug("[time: %s] - [End] - Stream model: %s done!", datetime.now(), model)
+            logger.debug(
+                "[time: %s] - [End] - Stream model: %s done!",
+                datetime.now(),
+                model,
+            )
 
     @retry(
         retry=retry_if_exception_type(exception_types=_ERROR_GROUP),
@@ -347,7 +367,9 @@ class OpenAIChatProxy:
         )
 
     async def batch_stream_chat_completion(
-        self, batch_messages: list[list[dict[str, Any]]], model: str,
+        self,
+        batch_messages: list[list[dict[str, Any]]],
+        model: str,
         max_concurrent_streams: int = 0,
         on_stream_error: Callable[[int, Exception], None] | None = None,
         **kwargs: Any,
@@ -356,12 +378,19 @@ class OpenAIChatProxy:
         if not batch_messages:
             return
         queue: asyncio.Queue[tuple[int, str] | None] = asyncio.Queue()
-        sem = asyncio.Semaphore(max_concurrent_streams) if max_concurrent_streams > 0 else None
+        sem = (
+            asyncio.Semaphore(max_concurrent_streams)
+            if max_concurrent_streams > 0
+            else None
+        )
+
         async def _run(idx: int, msgs: list[dict[str, Any]]) -> None:
             try:
                 if sem:
                     await sem.acquire()
-                async for tok in self.stream_chat_completion(msgs, model, **kwargs):
+                async for tok in self.stream_chat_completion(
+                    msgs, model, **kwargs
+                ):
                     await queue.put((idx, tok))
             except Exception as exc:
                 if on_stream_error:
@@ -369,26 +398,39 @@ class OpenAIChatProxy:
             finally:
                 if sem:
                     sem.release()
-        tasks = [asyncio.create_task(_run(i, m)) for i, m in enumerate(batch_messages)]
+
+        tasks = [
+            asyncio.create_task(_run(i, m))
+            for i, m in enumerate(batch_messages)
+        ]
+
         async def _drain() -> None:
             await asyncio.gather(*tasks, return_exceptions=True)
             await queue.put(None)
+
         sentinel = asyncio.create_task(_drain())
         while (item := await queue.get()) is not None:
             yield item
         await sentinel
 
     async def batch_embeddings(
-        self, *, batch_sentences: list[Union[str, Sequence]],
-        model: str | None = None, extra_bodies: list[object] | None = None,
+        self,
+        *,
+        batch_sentences: list[Union[str, Sequence]],
+        model: str | None = None,
+        extra_bodies: list[object] | None = None,
         **kwargs: Any,
     ) -> list[list[Any]]:
         """批量调用 OpenAI Embeddings 接口。"""
         tasks = [
-            asyncio.create_task(self.embeddings(
-                model=model, sentences=batch_sentences[i],
-                extra_body=extra_bodies[i] if extra_bodies else None, **kwargs,
-            ))
+            asyncio.create_task(
+                self.embeddings(
+                    model=model,
+                    sentences=batch_sentences[i],
+                    extra_body=extra_bodies[i] if extra_bodies else None,
+                    **kwargs,
+                )
+            )
             for i in range(len(batch_sentences))
         ]
         return await asyncio.gather(*tasks)

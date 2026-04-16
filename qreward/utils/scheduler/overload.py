@@ -1,4 +1,5 @@
-"""Overload detection for identifying server-side overload conditions."""
+"""Overload detection for identifying server-side overload
+conditions."""
 
 from http import HTTPStatus
 from typing import Set
@@ -15,13 +16,15 @@ MAX_EXCEPTION_CHAIN_DEPTH = 50
 
 
 class OverloadChecker:
-    """Checker for detecting server-side overload conditions from exceptions."""
+    """Checker for detecting server-side overload conditions from
+    exceptions."""
 
     @staticmethod
     def check(exception: BaseException) -> bool:
         """Check if exception indicates server overload.
 
-        Iteratively walks the exception chain (via __cause__ and __context__)
+        Iteratively walks the exception chain (via __cause__ and
+        __context__)
         up to MAX_EXCEPTION_CHAIN_DEPTH levels to detect overload signals.
 
         Args:
@@ -55,7 +58,8 @@ class OverloadChecker:
 
     @staticmethod
     def _check_single(exception: BaseException) -> bool:
-        """Check a single exception (without following chains) for overload signals.
+        """Check a single exception (without following chains) for
+        overload signals.
 
         Args:
             exception: Exception to check
@@ -86,7 +90,9 @@ class OverloadChecker:
             return True
 
         # 3. Library-specific exception handling
-        for lib_name, exceptions in LIBRARY_OVERLOAD_EXCEPTIONS_MAPPING.items():
+        for lib_name, exceptions in (
+            LIBRARY_OVERLOAD_EXCEPTIONS_MAPPING.items()
+        ):
             if lib_name in exception_type_full and any(
                 exc in exception_type_name for exc in exceptions
             ):
@@ -107,7 +113,9 @@ class OverloadChecker:
         if hasattr(exception, "args") and exception.args:
             if any(
                 isinstance(arg, str)
-                and any(keyword in arg.lower() for keyword in OVERLOAD_KEYWORDS)
+                and any(
+                    keyword in arg.lower() for keyword in OVERLOAD_KEYWORDS
+                )
                 for arg in exception.args
             ):
                 return True

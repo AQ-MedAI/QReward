@@ -98,12 +98,15 @@ SYSTEM_OVERLOAD_INDICATORS = frozenset(
     [
         "errno 24",  # EMFILE - Too many open files
         "errno 23",  # ENFILE - File table overflow
-        "errno 11",  # EAGAIN/EWOULDBLOCK - Resource temporarily unavailable
+        "errno 11",  # EAGAIN/EWOULDBLOCK - Resource temporarily
+                     # unavailable
         "errno 12",  # ENOMEM - Out of memory
-        "errno 10054",  # WSAECONNRESET - Connection reset by peer (Windows)
+        "errno 10054",  # WSAECONNRESET - Connection reset by peer
+                        # (Windows)
         "errno 104",  # ECONNRESET - Connection reset by peer (Linux)
         "errno 110",  # ETIMEDOUT - Connection timed out (Linux)
-        "errno 10060",  # WSAETIMEDOUT - Connection timed out (Windows)
+        "errno 10060",  # WSAETIMEDOUT - Connection timed out
+                        # (Windows)
     ]
 )
 

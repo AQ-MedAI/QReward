@@ -123,10 +123,16 @@ class TelemetryExporter:
         if not self._enabled or isinstance(span, _NoOpSpan):
             return
         span.set_attribute("qreward.total_calls", metrics.total_calls)
-        span.set_attribute("qreward.success_count", metrics.success_count)
-        span.set_attribute("qreward.failure_count", metrics.failure_count)
+        span.set_attribute(
+            "qreward.success_count", metrics.success_count
+        )
+        span.set_attribute(
+            "qreward.failure_count", metrics.failure_count
+        )
         span.set_attribute("qreward.retry_count", metrics.retry_count)
-        span.set_attribute("qreward.total_latency_ms", metrics.total_latency_ms)
+        span.set_attribute(
+            "qreward.total_latency_ms", metrics.total_latency_ms
+        )
         span.end()
 
 

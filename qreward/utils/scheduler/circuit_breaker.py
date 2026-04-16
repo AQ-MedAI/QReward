@@ -1,7 +1,7 @@
 """Circuit breaker implementation for fault tolerance.
 
-Provides automatic circuit breaking when consecutive failures reach a threshold,
-with half-open state probing for recovery.
+Provides automatic circuit breaking when consecutive failures reach a
+threshold, with half-open state probing for recovery.
 """
 
 import logging

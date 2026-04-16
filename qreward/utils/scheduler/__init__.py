@@ -1,6 +1,6 @@
 """
-Scheduler package - A request scheduling decorator with throttling, hedging, retry,
-timeout, and concurrency control features.
+Scheduler package - A request scheduling decorator with throttling, hedging,
+retry, timeout, and concurrency control features.
 """
 
 from .adaptive_limiter import AdaptiveRateLimiter

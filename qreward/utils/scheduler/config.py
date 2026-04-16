@@ -9,7 +9,7 @@ Example:
 
 import threading
 import warnings
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any, Callable, List, Tuple, Type, Union
 
 from .priority_queue import Priority
@@ -61,9 +61,9 @@ class ScheduleConfig:
     limit_size: int = 0
     limit_window: float = 1.0
     key_func: Any = field(default=_sentinel_none)
-    exception_types: Union[Type[BaseException], Tuple[Type[BaseException], ...]] = (
-        BaseException
-    )
+    exception_types: Union[
+        Type[BaseException], Tuple[Type[BaseException], ...]
+    ] = (BaseException,)
     default_result: Any = field(default=_sentinel_none)
     debug: bool = False
     adaptive_limit: bool = False
@@ -95,7 +95,8 @@ class ScheduleConfig:
             or self.hedged_request_proportion > 1.0
         ):
             raise ValueError(
-                f"hedged_request_proportion must be in ({MIN_HEDGE_PROPORTION}, 1]"
+                f"hedged_request_proportion must be in "
+                f"({MIN_HEDGE_PROPORTION}, 1]"
             )
 
     @property
@@ -106,7 +107,8 @@ class ScheduleConfig:
         return 0
 
     def adjust_wait_time(
-        self, basic_wait_time: float, has_wait_time: float, max_wait_time: float
+        self, basic_wait_time: float, has_wait_time: float,
+        max_wait_time: float
     ) -> float:
         """Calculate max wait time considering timeout.
 
@@ -120,21 +122,27 @@ class ScheduleConfig:
         """
         if basic_wait_time < 0:
             basic_wait_time = MIN_WAIT_TIME
-        if max_wait_time <= 0 or basic_wait_time + has_wait_time < max_wait_time:
+        if (
+            max_wait_time <= 0
+            or basic_wait_time + has_wait_time < max_wait_time
+        ):
             return basic_wait_time
         if has_wait_time > max_wait_time:
             return MIN_WAIT_TIME
         return max_wait_time - has_wait_time
 
     def get_max_wait_time(
-        self, basic_wait_time: float, has_wait_time: float, max_wait_time: float
+        self, basic_wait_time: float, has_wait_time: float,
+        max_wait_time: float
     ) -> float:
         warnings.warn(
             "get_max_wait_time is deprecated, use adjust_wait_time instead",
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.adjust_wait_time(basic_wait_time, has_wait_time, max_wait_time)
+        return self.adjust_wait_time(
+            basic_wait_time, has_wait_time, max_wait_time
+        )
 
     # --- Hot-reload support ---
 
@@ -164,7 +172,10 @@ class ScheduleConfig:
         """
         with self._update_lock:
             for key, value in kwargs.items():
-                if hasattr(self, key) and key not in ("_change_callbacks", "_update_lock"):
+                if hasattr(self, key) and key not in (
+                    "_change_callbacks",
+                    "_update_lock",
+                ):
                     setattr(self, key, value)
             self.__post_init__()
         for cb in self._change_callbacks:

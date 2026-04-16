@@ -17,7 +17,9 @@ class LimiterPool:
     global_limiter_pool: dict = {}
 
     @classmethod
-    def get_pool(cls, key: str, rate: int, window: float) -> Optional["LimiterPool"]:
+    def get_pool(
+        cls, key: str, rate: int, window: float
+    ) -> Optional["LimiterPool"]:
         """Get or create a limiter pool instance for the given key.
 
         Uses singleton pattern to ensure one pool per key.
