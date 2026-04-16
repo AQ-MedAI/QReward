@@ -59,11 +59,9 @@ async def test_patch_openai_embeddings_branches():
         ),
         patch.object(my_module, "is_given", lambda x: False),
         patch.object(my_module, "maybe_transform", lambda p, _: p),
-        patch.object(
-            my_module,
-            "make_request_options",
-            lambda **kwargs: kwargs
-        ),
+        patch.object(my_module,
+                     "make_request_options",
+                     lambda **kwargs: kwargs),
     ):
 
         my_module.patch_openai_embeddings()
@@ -85,11 +83,9 @@ async def test_patch_openai_embeddings_branches():
         ),
         patch.object(my_module, "is_given", lambda x: True),
         patch.object(my_module, "maybe_transform", lambda p, _: p),
-        patch.object(
-            my_module,
-            "make_request_options",
-            lambda **kwargs: kwargs
-        ),
+        patch.object(my_module,
+                     "make_request_options",
+                     lambda **kwargs: kwargs),
     ):
 
         my_module.patch_openai_embeddings()
@@ -118,10 +114,8 @@ async def test_patch_with_custom_class_and_parser():
     dummy_instance = DummyAsyncEmbeddings()
 
     async def fake_post(self, url, body, options, cast_to):
-        return (
-            f"cast_to:{cast_to.__name__},"
-            f"parser:{options['post_parser']('OBJ')}"
-        )
+        return (f"cast_to:{cast_to.__name__}, "
+                f"parser:{options['post_parser']('OBJ')}")
 
     dummy_instance._post = fake_post.__get__(
         dummy_instance,
@@ -135,11 +129,9 @@ async def test_patch_with_custom_class_and_parser():
         ),
         patch.object(my_module, "is_given", lambda x: True),
         patch.object(my_module, "maybe_transform", lambda p, _: p),
-        patch.object(
-            my_module,
-            "make_request_options",
-            lambda **kwargs: kwargs
-        ),
+        patch.object(my_module,
+                     "make_request_options",
+                     lambda **kwargs: kwargs),
     ):
 
         my_module.patch_openai_embeddings(CustomReturnCls, custom_parser)

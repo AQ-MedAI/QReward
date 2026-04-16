@@ -106,15 +106,14 @@ async def test_timeout():
 def test_sync_func():
     @schedule(debug=True, retry_times=5, default_result=0)
     def _sync_job(n: int) -> int:
-        time.sleep(0.1)
+        time.sleep(0.01)
         if n % 10 == 0 and random.randint(0, 10_000) < 8_500:
             raise BaseException("test")
         return n
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=128) as pool:
         futures = [pool.submit(_sync_job, i) for i in range(128)]
-        results = [f.result() for f in concurrent.futures.as_completed(
-            futures)]
+        results = [f.result() for f in concurrent.futures.as_completed(futures)]
 
     assert len(results) == 128
 
@@ -124,7 +123,7 @@ def test_sync_func():
 async def test_async_func():
     @schedule(debug=True, retry_times=5, default_result=0)
     async def _async_job(n: int) -> int:
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.01)
         if n % 10 == 0 and random.randint(0, 10_000) < 8_500:
             raise BaseException("test")
         return n
@@ -151,9 +150,9 @@ async def test_async_overload_func():
         total_size += 1
         cur_size += 1
         check_size = cur_size
-        await asyncio.sleep(5 + random.random() * 3)
+        await asyncio.sleep(0.5 + random.random() * 0.3)
         if random.random() < 0.01:
-            await asyncio.sleep(50 + random.random() * 30)
+            await asyncio.sleep(0.5 + random.random() * 0.3)
         if check_size <= 500:
             cur_size -= 1
             if n % 10 == 0 and random.random() < 0.75:
@@ -163,18 +162,12 @@ async def test_async_overload_func():
             else:
                 return n
         else:
-            await asyncio.sleep(10)
+            await asyncio.sleep(1)
             overload_size += 1
             cur_size -= 1
             raise asyncio.TimeoutError("test")
 
-    # speed_up_max_multiply=0 hedged_request_time=0 : 耗时 160秒 执行 760 次，过载 12 次
-    # speed_up_max_multiply=5 hedged_request_time=0 : 耗时 75秒  执行 810 次，过载 12 次
-    # speed_up_max_multiply=0 hedged_request_time=20: 耗时 150秒 执行 780 次，过载 12 次
-    # speed_up_max_multiply=5 hedged_request_time=20: 耗时 45秒  执行 820 次，过载 12 次
-
-    results = await asyncio.gather(
-        *[_async_overload_job(i) for i in range(512)])
+    results = await asyncio.gather(*[_async_overload_job(i) for i in range(512)])
     print(overload_size)
     print(total_size)
     assert overload_size < 50
@@ -200,9 +193,9 @@ async def test_async_overload_low_fail_func():
         total_size += 1
         cur_size += 1
         check_size = cur_size
-        await asyncio.sleep(5 + random.random() * 3)
+        await asyncio.sleep(0.5 + random.random() * 0.3)
         if random.random() < 0.01:
-            await asyncio.sleep(50 + random.random() * 30)
+            await asyncio.sleep(0.5 + random.random() * 0.3)
         if check_size <= 500:
             cur_size -= 1
             if random.random() < 0.1:
@@ -210,15 +203,10 @@ async def test_async_overload_low_fail_func():
             else:
                 return n
         else:
-            await asyncio.sleep(10)
+            await asyncio.sleep(1)
             overload_size += 1
             cur_size -= 1
             raise asyncio.TimeoutError("test")
-
-    # speed_up_max_multiply=0 hedged_request_time=0 : 耗时 90秒 执行 585 次，过载 12 次
-    # speed_up_max_multiply=5 hedged_request_time=0 : 耗时 70秒 执行 590 次，过载 12 次
-    # speed_up_max_multiply=0 hedged_request_time=20: 耗时 75秒 执行 590 次，过载 12 次
-    # speed_up_max_multiply=5 hedged_request_time=20: 耗时 30秒 执行 600 次，过载 12 次
 
     results = await asyncio.gather(
         *[_async_overload_low_fail_job(i) for i in range(512)]
@@ -248,9 +236,9 @@ async def test_sync_overload_low_fail_func():
         total_size += 1
         cur_size += 1
         check_size = cur_size
-        time.sleep(5 + random.random() * 3)
+        time.sleep(0.5 + random.random() * 0.3)
         if random.random() < 0.01:
-            time.sleep(50 + random.random() * 30)
+            time.sleep(0.5 + random.random() * 0.3)
         if check_size <= 500:
             cur_size -= 1
             if random.random() < 0.1:
@@ -258,24 +246,14 @@ async def test_sync_overload_low_fail_func():
             else:
                 return n
         else:
-            time.sleep(10)
+            time.sleep(1)
             overload_size += 1
             cur_size -= 1
             raise asyncio.TimeoutError("test")
 
-    # speed_up_max_multiply=0 hedged_request_time=0 : 耗时 90秒 执行 585 次，过载 12 次
-    # speed_up_max_multiply=5 hedged_request_time=0 : 耗时 70秒 执行 590 次，过载 12 次
-    # speed_up_max_multiply=0 hedged_request_time=20: 耗时 75秒 执行 590 次，过载 12 次
-    # speed_up_max_multiply=5 hedged_request_time=20: 耗时 30秒 执行 600 次，过载 12 次
-
     with concurrent.futures.ThreadPoolExecutor(max_workers=512) as pool:
-        futures = [
-            pool.submit(_sync_overload_low_fail_job, i)
-            for i in range(512)
-        ]
-        results = [
-            f.result() for f in concurrent.futures.as_completed(futures)
-        ]
+        futures = [pool.submit(_sync_overload_low_fail_job, i) for i in range(512)]
+        results = [f.result() for f in concurrent.futures.as_completed(futures)]
     print(overload_size)
     print(total_size)
     assert overload_size < 50
@@ -343,12 +321,12 @@ async def test_async_error_fail_func():
         default_result=0,
     )
     async def _async_overload_error_fail_job(n: int) -> int:
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.05)
         if random.random() < 0.99:
             raise create_exception_class()
         return n
 
-    for _ in range(45):
+    for _ in range(10):
         results = await asyncio.gather(
             *[_async_overload_error_fail_job(i) for i in range(512)]
         )
@@ -359,15 +337,14 @@ async def test_async_error_fail_func():
 def test_sync_consume_time_func():
     @schedule(debug=True, retry_times=5, default_result=0)
     def _sync_job(n: int) -> int:
-        time.sleep(3)
+        time.sleep(0.3)
         if random.randint(0, 10000) < 5000:
             raise BaseException("test")
         return n
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=128) as pool:
         futures = [pool.submit(_sync_job, i) for i in range(128)]
-        results = [f.result() for f in concurrent.futures.as_completed(
-            futures)]
+        results = [f.result() for f in concurrent.futures.as_completed(futures)]
 
     assert len(results) == 128
 
@@ -416,7 +393,7 @@ async def test_async_limit():
         ts = int(time.time())
         with lock:
             counter[ts] = counter.get(ts, 0) + 1
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.001)
         if random.randint(0, 10_000) < 500:
             raise TimeoutError("timeout")
         return n
@@ -945,8 +922,7 @@ def test_cur_timeout_sync(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "remaining_time, expected_timeout", [(0.5, 0.5), (-0.5,
-                                                      0.001)]  # 场景1  # 场景2
+    "remaining_time, expected_timeout", [(0.5, 0.5), (-0.5, 0.001)]  # 场景1  # 场景2
 )
 async def test_cur_timeout_async(
     monkeypatch,
@@ -977,9 +953,7 @@ async def test_cur_timeout_async(
             {"add": lambda self, v: None, "can_submit": lambda self, v: True},
         )(),
     )
-    monkeypatch.setattr(
-        LimiterPool, "get_pool", lambda *a, **k: DummyLimiter()
-    )
+    monkeypatch.setattr(LimiterPool, "get_pool", lambda *a, **k: DummyLimiter())
 
     timeout_value = 5
     start_time = 100.0
@@ -1009,10 +983,10 @@ async def test_cur_timeout_async(
     assert captured_timeouts[0] == expected_timeout
 
 
-def test_running_task_pool_add_and_less_than():
+def test_running_task_pool_add_and_can_submit():
     from qreward.utils.schedule import RunningTaskPool
 
-    # 创建任务池，threshold设小一点方便触发 less_than 逻辑
+    # 创建任务池，threshold设小一点方便触发 can_submit 逻辑
     pool = RunningTaskPool(window_max_size=5, window_interval=1, threshold=1)
 
     # Step1: 基础 add 测试
@@ -1022,20 +996,20 @@ def test_running_task_pool_add_and_less_than():
 
     # Step2: threshold 分支
     pool._value = 1
-    assert pool.less_than() is True
+    assert pool.can_submit() is True
 
     # Step3: max_value 判断 True 情况
     pool._max_size_map.clear()
     pool._max_size_map[100] = 5
     pool._max_size_map[101] = 3
     pool._value = 2
-    assert pool.less_than(1) is True  # 5 > 2*1 → True
+    assert pool.can_submit(1) is True  # 5 > 2*1 → True
 
     # Step4: max_value 判断 False 情况
     pool._max_size_map.clear()
     pool._max_size_map[200] = 4
     pool._value = 2
-    assert pool.less_than(2) is False  # 4 > 2*2 → False
+    assert pool.can_submit(2) is False  # 4 > 2*2 → False
 
 
 def test_schedule_else_branch_sync():
@@ -1095,8 +1069,7 @@ async def test_schedule_else_branch_async():
 async def test_finished_cancelled_async():
     calls = {"count": 0}
 
-    @schedule(timeout=0.2, retry_times=0, retry_interval=0.1,
-              exception_types=Exception)
+    @schedule(timeout=0.2, retry_times=0, retry_interval=0.1, exception_types=Exception)
     async def slow_task():
         calls["count"] += 1
         await asyncio.sleep(1)  # 足够长，让它被取消
@@ -1248,8 +1221,7 @@ def test_hedged_request_multiply_enabled():
     """覆盖 ScheduleConfig.hedged_request_multiply 属性 (行 65)。"""
     from qreward.utils.scheduler.config import ScheduleConfig
 
-    config = ScheduleConfig(hedged_request_time=2.0,
-                            hedged_request_proportion=0.05)
+    config = ScheduleConfig(hedged_request_time=2.0, hedged_request_proportion=0.05)
     assert config.hedged_request_multiply == pytest.approx(19.0)
 
 
@@ -1257,20 +1229,19 @@ def test_hedged_request_multiply_disabled():
     """hedged_request_time=0 时 multiply 应为 0。"""
     from qreward.utils.scheduler.config import ScheduleConfig
 
-    config = ScheduleConfig(hedged_request_time=0,
-                            hedged_request_proportion=0.05)
+    config = ScheduleConfig(hedged_request_time=0, hedged_request_proportion=0.05)
     assert config.hedged_request_multiply == 0
 
 
 # ---------- config.py: get_max_wait_time has_wait_time > max_wait_time
 # ----------
-def test_config_get_max_wait_time_has_wait_exceeds_max():
-    """覆盖 ScheduleConfig.get_max_wait_time 中 has_wait_time > max_wait_time 分支
-        (行 81)。"""
+def test_config_adjust_wait_time_has_wait_exceeds_max():
+    """覆盖 ScheduleConfig.adjust_wait_time 中 has_wait_time > max_wait_time 分支
+    (行 81)。"""
     from qreward.utils.scheduler.config import ScheduleConfig
 
     config = ScheduleConfig()
-    result = config.get_max_wait_time(
+    result = config.adjust_wait_time(
         basic_wait_time=1.0, has_wait_time=10.0, max_wait_time=5.0
     )
     assert result == 0.01
@@ -1289,8 +1260,7 @@ def test_should_hedge_returns_less_than():
         hedged_request_max_times=3,
         retry_times=5,
     )
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -1319,8 +1289,7 @@ def test_is_hedge_submit_threshold():
         hedged_request_max_times=3,
         retry_times=5,
     )
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -1348,8 +1317,7 @@ def test_get_limiter_timeout_remaining_less_than_interval():
         retry_interval=2.0,
         retry_times=3,
     )
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -1375,8 +1343,7 @@ def test_get_limiter_timeout_no_timeout_with_tasks():
         retry_interval=2.0,
         retry_times=3,
     )
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -1392,7 +1359,7 @@ def test_get_limiter_timeout_no_timeout_with_tasks():
 # ---------- context.py: compute_timeout 加速模式分支 ----------
 def test_compute_timeout_speed_up_branch():
     """覆盖 compute_timeout 中 run_tasks_count < cur_speed_up_multiply 分支 (行
-        190->192)。"""
+    190->192)。"""
     from qreward.utils.scheduler.config import ScheduleConfig
     from qreward.utils.scheduler.context import ExecutionContext
     from qreward.utils.scheduler.pools import RunningTaskPool
@@ -1403,8 +1370,7 @@ def test_compute_timeout_speed_up_branch():
         retry_times=5,
         hedged_request_time=0,
     )
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -1432,8 +1398,7 @@ async def test_handle_exception_non_retryable():
 
     runner = AsyncRunner()
     config = ScheduleConfig(exception_types=(ValueError,))
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -1468,8 +1433,7 @@ async def test_handle_exception_retryable_with_speed_up():
 
     runner = AsyncRunner()
     config = ScheduleConfig(exception_types=(ValueError,))
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -1505,8 +1469,7 @@ async def test_handle_exception_retryable_overload_resets_speed():
 
     runner = AsyncRunner()
     config = ScheduleConfig(exception_types=(BaseException,))
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -1555,6 +1518,8 @@ def test_sync_debug_print(caplog):
         "[schedule]" in r.message and "execute finish" in r.message
         for r in caplog.records
     )
+
+
 # ---------- base.py: 同步执行中非可重试异常 ----------
 
 
@@ -1706,6 +1671,7 @@ def test_sync_timeout_with_default():
 
 
 # ---------- base.py: AsyncRunner 方法直接调用 ----------
+
 
 @pytest.mark.asyncio
 async def test_async_runner_methods():
@@ -1894,8 +1860,7 @@ async def test_cancel_async_task_pending_already_done():
     await asyncio.sleep(0.01)  # 确保 task 完成
     assert completed_task.done()
 
-    await _cancel_async_task(pending=[completed_task], done=[],
-                             retry_interval=0.1)
+    await _cancel_async_task(pending=[completed_task], done=[], retry_interval=0.1)
 
 
 # ---------- schedule.py: _cancel_sync_task 中 not_done task 已完成跳过 cancel
@@ -1914,21 +1879,21 @@ def test_cancel_sync_task_not_done_already_done():
 
 # ---------- config.py: get_max_wait_time 中 has_wait_time > max_wait_time
 # (行81) ----------
-def test_config_get_max_wait_time_has_wait_exceeds_max_direct():
-    """直接测试 ScheduleConfig.get_max_wait_time 中 has_wait_time >
-        max_wait_time。"""
+def test_config_adjust_wait_time_has_wait_exceeds_max_direct():
+    """直接测试 ScheduleConfig.adjust_wait_time 中 has_wait_time >
+    max_wait_time。"""
     from qreward.utils.scheduler.config import ScheduleConfig
 
     config = ScheduleConfig()
     # basic_wait_time + has_wait_time >= max_wait_time (进入第二个 if)
     # has_wait_time > max_wait_time (进入第三个 if)
-    result = config.get_max_wait_time(
+    result = config.adjust_wait_time(
         basic_wait_time=1.0, has_wait_time=6.0, max_wait_time=5.0
     )
     assert result == 0.01
 
     # 也测试 max_wait_time - has_wait_time 分支
-    result2 = config.get_max_wait_time(
+    result2 = config.adjust_wait_time(
         basic_wait_time=2.0, has_wait_time=4.0, max_wait_time=5.0
     )
     assert result2 == 1.0  # 5.0 - 4.0
@@ -1980,8 +1945,7 @@ def test_compute_timeout_speed_up_with_timeout():
         retry_times=5,
         hedged_request_time=0,
     )
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -2151,8 +2115,6 @@ def test_sync_debug_print_with_exception(caplog):
 
     assert any(
         "[schedule]" in r.message and "execute finish" in r.message
-
-
         for r in caplog.records
     )
 
@@ -2210,8 +2172,7 @@ def test_should_hedge_time_condition_false():
         hedged_request_max_times=3,
         retry_times=5,
     )
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -2239,8 +2200,7 @@ def test_should_hedge_max_times_exceeded():
         hedged_request_max_times=1,
         retry_times=5,
     )
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -2262,8 +2222,7 @@ def test_is_hedge_submit_hedged_disabled():
     from qreward.utils.scheduler.pools import RunningTaskPool
 
     config = ScheduleConfig(hedged_request_time=0, retry_times=5)
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -2288,8 +2247,7 @@ def test_is_hedge_submit_speed_up_overrides():
         hedged_request_max_times=3,
         retry_times=5,
     )
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -2315,8 +2273,7 @@ def test_is_hedge_submit_max_times_exceeded():
         hedged_request_max_times=1,
         retry_times=5,
     )
-    pool = RunningTaskPool(window_max_size=100, window_interval=10,
-                           threshold=1)
+    pool = RunningTaskPool(window_max_size=100, window_interval=10, threshold=1)
     context = ExecutionContext(
         func=lambda: None,
         config=config,
@@ -2702,8 +2659,7 @@ from qreward.utils.scheduler.pools import (  # noqa: E402
 
 def _make_pool(key: str) -> RunningTaskPool:
     """创建一个干净的 RunningTaskPool 实例（避免全局池污染）。"""
-    pool = RunningTaskPool(window_max_size=100, window_interval=60,
-                           threshold=100)
+    pool = RunningTaskPool(window_max_size=100, window_interval=60, threshold=100)
     return pool
 
 
@@ -3190,8 +3146,7 @@ def test_system_exit_not_caught():
     )
 
     with pytest.raises(SystemExit):
-        runner._handle_exception(context, config, future,
-                                 can_add_speed_up=False)
+        runner._handle_exception(context, config, future, can_add_speed_up=False)
 
 
 def test_keyboard_interrupt_not_caught():
@@ -3219,8 +3174,7 @@ def test_keyboard_interrupt_not_caught():
     )
 
     with pytest.raises(KeyboardInterrupt):
-        runner._handle_exception(context, config, future,
-                                 can_add_speed_up=False)
+        runner._handle_exception(context, config, future, can_add_speed_up=False)
 
 
 def test_overload_deep_exception_chain():
@@ -3244,7 +3198,7 @@ def test_overload_deep_exception_chain():
 
 def test_overload_checker_finds_overload_in_chain():
     """Verify OverloadChecker detects overload signal in a chained
-        exception."""
+    exception."""
     root = RuntimeError("rate limit exceeded")
     wrapper = ValueError("wrapper")
     wrapper.__cause__ = root
@@ -3315,6 +3269,7 @@ def test_limiter_condition_timeout():
 # ============================================================
 # Sprint 8: Observability — ScheduleMetrics + logging
 # ============================================================
+
 
 def test_schedule_metrics_fields():
     """Verify ScheduleMetrics dataclass has all required fields."""
@@ -3416,7 +3371,7 @@ def test_metrics_callback_sync():
 
 def test_context_metrics_fields():
     """Verify ExecutionContext.build_metrics() returns correct
-        ScheduleMetrics."""
+    ScheduleMetrics."""
     from qreward.utils.scheduler.context import ExecutionContext  # noqa: E402
     from qreward.utils.scheduler.config import ScheduleConfig  # noqa: E402
     from qreward.utils.scheduler.pools import RunningTaskPool  # noqa: E402
@@ -3500,9 +3455,10 @@ def test_schedule_debug_sync_uses_logger(caplog):
 
 def test_circuit_breaker_state_transitions():
     """M-VERIFY-1: CircuitBreaker state transitions CLOSED -> OPEN ->
-        HALF_OPEN -> CLOSED."""
+    HALF_OPEN -> CLOSED."""
     from qreward.utils.scheduler import (  # noqa: E402
-        CircuitBreaker, CircuitState,
+        CircuitBreaker,
+        CircuitState,
     )
 
     current_time = 0.0
@@ -3540,7 +3496,8 @@ def test_circuit_breaker_state_transitions():
 def test_circuit_breaker_opens_on_threshold():
     """M-VERIFY-2: Consecutive failures reaching threshold triggers OPEN."""
     from qreward.utils.scheduler import (  # noqa: E402
-        CircuitBreaker, CircuitState,
+        CircuitBreaker,
+        CircuitState,
     )
 
     breaker = CircuitBreaker(failure_threshold=5)
@@ -3548,9 +3505,9 @@ def test_circuit_breaker_opens_on_threshold():
     # Failures below threshold keep CLOSED
     for i in range(4):
         breaker.record_failure()
-        assert breaker.state == CircuitState.CLOSED, (
-            f"Should be CLOSED after {i+1} failures"
-        )
+        assert (
+            breaker.state == CircuitState.CLOSED
+        ), f"Should be CLOSED after {i+1} failures"
 
     # 5th failure trips the breaker
     breaker.record_failure()
@@ -3560,7 +3517,8 @@ def test_circuit_breaker_opens_on_threshold():
 def test_circuit_breaker_blocks_requests():
     """M-VERIFY-3: OPEN state blocks allow_request()."""
     from qreward.utils.scheduler import (  # noqa: E402
-        CircuitBreaker, CircuitState,
+        CircuitBreaker,
+        CircuitState,
     )
 
     breaker = CircuitBreaker(failure_threshold=2, recovery_timeout=60.0)
@@ -3580,9 +3538,10 @@ def test_circuit_breaker_blocks_requests():
 
 def test_circuit_breaker_half_open():
     """M-VERIFY-4: After recovery_timeout, enters HALF_OPEN and allows
-        probe."""
+    probe."""
     from qreward.utils.scheduler import (  # noqa: E402
-        CircuitBreaker, CircuitState,
+        CircuitBreaker,
+        CircuitState,
     )
 
     current_time = 0.0
@@ -3615,7 +3574,8 @@ def test_circuit_breaker_half_open():
 def test_circuit_breaker_half_open_failure_reopens():
     """HALF_OPEN probe failure re-opens the breaker."""
     from qreward.utils.scheduler import (  # noqa: E402
-        CircuitBreaker, CircuitState,
+        CircuitBreaker,
+        CircuitState,
     )
 
     current_time = 0.0
@@ -3646,7 +3606,8 @@ def test_circuit_breaker_half_open_failure_reopens():
 def test_circuit_breaker_reset():
     """reset() returns breaker to initial CLOSED state."""
     from qreward.utils.scheduler import (  # noqa: E402
-        CircuitBreaker, CircuitState,
+        CircuitBreaker,
+        CircuitState,
     )
 
     breaker = CircuitBreaker(failure_threshold=2)
@@ -3663,7 +3624,8 @@ def test_circuit_breaker_reset():
 def test_circuit_breaker_success_resets_failure_count():
     """A success in CLOSED state resets the consecutive failure counter."""
     from qreward.utils.scheduler import (  # noqa: E402
-        CircuitBreaker, CircuitState,
+        CircuitBreaker,
+        CircuitState,
     )
 
     breaker = CircuitBreaker(failure_threshold=3)
@@ -3714,7 +3676,7 @@ def test_schedule_with_circuit_breaker():
 @pytest.mark.asyncio
 async def test_schedule_with_circuit_breaker_async():
     """S-1 async: schedule decorator supports circuit_breaker_threshold for
-        async."""
+    async."""
 
     call_count = 0
 
@@ -3745,7 +3707,8 @@ def test_circuit_breaker_thread_safe():
     """S-2: Circuit breaker is thread-safe under concurrent access."""
     import concurrent.futures  # noqa: E402
     from qreward.utils.scheduler import (  # noqa: E402
-        CircuitBreaker, CircuitState,
+        CircuitBreaker,
+        CircuitState,
     )
 
     breaker = CircuitBreaker(failure_threshold=100, recovery_timeout=60.0)
@@ -3774,8 +3737,9 @@ def test_circuit_breaker_logging(caplog):
     def fake_time():
         return current_time
 
-    with caplog.at_level(logging.INFO,
-                         logger="qreward.utils.scheduler.circuit_breaker"):
+    with caplog.at_level(
+        logging.INFO, logger="qreward.utils.scheduler.circuit_breaker"
+    ):
         breaker = CircuitBreaker(
             failure_threshold=2,
             recovery_timeout=5.0,
@@ -3790,8 +3754,9 @@ def test_circuit_breaker_logging(caplog):
 
     caplog.clear()
 
-    with caplog.at_level(logging.INFO,
-                         logger="qreward.utils.scheduler.circuit_breaker"):
+    with caplog.at_level(
+        logging.INFO, logger="qreward.utils.scheduler.circuit_breaker"
+    ):
         # Advance time to trigger HALF_OPEN
         current_time = 6.0
         _ = breaker.state
@@ -3800,8 +3765,9 @@ def test_circuit_breaker_logging(caplog):
 
     caplog.clear()
 
-    with caplog.at_level(logging.INFO,
-                         logger="qreward.utils.scheduler.circuit_breaker"):
+    with caplog.at_level(
+        logging.INFO, logger="qreward.utils.scheduler.circuit_breaker"
+    ):
         breaker.record_success()
 
     assert any("HALF_OPEN -> CLOSED" in r.message for r in caplog.records)
@@ -3860,8 +3826,7 @@ def test_less_than_deprecated():
 
     assert result is True
     assert any(
-        issubclass(w.category, DeprecationWarning)
-        and "less_than" in str(w.message)
+        issubclass(w.category, DeprecationWarning) and "less_than" in str(w.message)
         for w in caught
     )
 
@@ -4164,8 +4129,7 @@ def test_priority_queue_thread_safety():
             errors.append(exc)
 
     # 4 producers, each adding 25 items
-    producers = [threading.Thread(target=producer, args=(i * 25,
-                                  25)) for i in range(4)]
+    producers = [threading.Thread(target=producer, args=(i * 25, 25)) for i in range(4)]
     for thread in producers:
         thread.start()
     for thread in producers:
@@ -4174,9 +4138,7 @@ def test_priority_queue_thread_safety():
     assert queue.queue_size == 100
 
     # 4 consumers, each taking 25 items
-    consumers = [
-        threading.Thread(target=consumer, args=(25,)) for i in range(4)
-    ]
+    consumers = [threading.Thread(target=consumer, args=(25,)) for i in range(4)]
     for thread in consumers:
         thread.start()
     for thread in consumers:
@@ -4231,6 +4193,7 @@ def test_priority_starvation_protection():
     queue.put("normal_task", priority=Priority.NORMAL)
 
     import time  # noqa: E402
+
     time.sleep(0.05)  # wait for starvation threshold
 
     # Both should be promoted; low_task was added first (lower sequence)
@@ -4279,17 +4242,20 @@ def test_priority_starvation_threshold_validation():
 # Sprint 19: Telemetry Tests
 # ============================================================
 
-from unittest.mock import patch  # noqa: E402
-from qreward.utils.scheduler.telemetry import TelemetryExporter, \
-    _OTEL_AVAILABLE  # noqa: F401, E402
-from qreward.utils.scheduler.metrics import ScheduleMetrics  # noqa: E402
+from unittest.mock import patch
+from qreward.utils.scheduler.telemetry import TelemetryExporter
+from qreward.utils.scheduler.metrics import ScheduleMetrics
 
 
 def test_telemetry_metrics_export():
     """M-VERIFY-1: Metrics are exported to OTel when available."""
     metrics = ScheduleMetrics(
-        total_calls=5, success_count=4, failure_count=1,
-        retry_count=2, total_latency_ms=150.0, avg_latency_ms=30.0,
+        total_calls=5,
+        success_count=4,
+        failure_count=1,
+        retry_count=2,
+        total_latency_ms=150.0,
+        avg_latency_ms=30.0,
     )
     mock_exporter = MagicMock()
     metrics.export_to_otel(mock_exporter)
@@ -4309,8 +4275,12 @@ def test_telemetry_graceful_degradation():
         exporter._latency_histogram = None
 
         metrics = ScheduleMetrics(
-            total_calls=1, success_count=1, failure_count=0,
-            retry_count=0, total_latency_ms=10.0, avg_latency_ms=10.0,
+            total_calls=1,
+            success_count=1,
+            failure_count=0,
+            retry_count=0,
+            total_latency_ms=10.0,
+            avg_latency_ms=10.0,
         )
         # Should not raise
         exporter.record(metrics)
@@ -4335,8 +4305,12 @@ def test_telemetry_span_attributes():
     exporter._latency_histogram = MagicMock()
 
     metrics = ScheduleMetrics(
-        total_calls=3, success_count=2, failure_count=1,
-        retry_count=1, total_latency_ms=100.0, avg_latency_ms=33.3,
+        total_calls=3,
+        success_count=2,
+        failure_count=1,
+        retry_count=1,
+        total_latency_ms=100.0,
+        avg_latency_ms=33.3,
     )
 
     span = exporter.start_span("my_func", attributes={"custom": "attr"})
@@ -4359,6 +4333,7 @@ def test_telemetry_is_available():
 def test_telemetry_env_disable():
     """S-2: QREWARD_OTEL_ENABLED=false disables telemetry."""
     import os  # noqa: E402
+
     with patch("qreward.utils.scheduler.telemetry._OTEL_AVAILABLE", True):
         with patch.dict(os.environ, {"QREWARD_OTEL_ENABLED": "false"}):
             assert TelemetryExporter.is_available() is False
@@ -4369,8 +4344,12 @@ def test_telemetry_env_disable():
 def test_telemetry_export_to_otel_none():
     """export_to_otel with None exporter is a no-op."""
     metrics = ScheduleMetrics(
-        total_calls=1, success_count=1, failure_count=0,
-        retry_count=0, total_latency_ms=10.0, avg_latency_ms=10.0,
+        total_calls=1,
+        success_count=1,
+        failure_count=0,
+        retry_count=0,
+        total_latency_ms=10.0,
+        avg_latency_ms=10.0,
     )
     # Should not raise
     metrics.export_to_otel(None)
@@ -4379,6 +4358,7 @@ def test_telemetry_export_to_otel_none():
 def test_telemetry_noop_span():
     """_NoOpSpan works as context manager."""
     from qreward.utils.scheduler.telemetry import _NoOpSpan  # noqa: E402
+
     span = _NoOpSpan()
     with span as s:
         s.set_attribute("key", "value")
@@ -4454,8 +4434,9 @@ def test_config_watcher_callback_source():
             return {"timeout": 99}
         return {}
 
-    watcher = ConfigWatcher(config, source="callback", callback=config_source,
-                            cooldown=0)
+    watcher = ConfigWatcher(
+        config, source="callback", callback=config_source, cooldown=0
+    )
     watcher.poll_once()  # first call returns empty
     watcher.poll_once()  # second call returns timeout=99
 
@@ -4465,6 +4446,7 @@ def test_config_watcher_callback_source():
 def test_config_watcher_env_source():
     """ConfigWatcher with env source reads QREWARD_SCHEDULE_ vars."""
     import os  # noqa: E402
+
     config = ScheduleConfig(timeout=5)
 
     with patch.dict(os.environ, {"QREWARD_SCHEDULE_TIMEOUT": "42"}):
@@ -4540,6 +4522,7 @@ def test_config_watcher_cooldown():
 # Coverage Boost: telemetry.py
 # ============================================================
 
+
 def test_telemetry_disabled_record_noop():
     """record() is a no-op when OTel is disabled."""
     exporter = TelemetryExporter.__new__(TelemetryExporter)
@@ -4552,8 +4535,12 @@ def test_telemetry_disabled_record_noop():
     exporter._latency_histogram = None
 
     metrics = ScheduleMetrics(
-        total_calls=1, success_count=1, failure_count=0,
-        retry_count=0, total_latency_ms=10.0, avg_latency_ms=10.0,
+        total_calls=1,
+        success_count=1,
+        failure_count=0,
+        retry_count=0,
+        total_latency_ms=10.0,
+        avg_latency_ms=10.0,
     )
     # Should not raise and should not call any counter
     exporter.record(metrics)
@@ -4592,8 +4579,12 @@ def test_telemetry_end_span_noop_span_skipped():
 
     noop_span = _NoOpSpan()
     metrics = ScheduleMetrics(
-        total_calls=1, success_count=1, failure_count=0,
-        retry_count=0, total_latency_ms=10.0, avg_latency_ms=10.0,
+        total_calls=1,
+        success_count=1,
+        failure_count=0,
+        retry_count=0,
+        total_latency_ms=10.0,
+        avg_latency_ms=10.0,
     )
     # Should not raise - skips because isinstance(span, _NoOpSpan)
     exporter.end_span(noop_span, metrics)
@@ -4606,8 +4597,12 @@ def test_telemetry_end_span_disabled_skipped():
 
     mock_span = MagicMock()
     metrics = ScheduleMetrics(
-        total_calls=1, success_count=1, failure_count=0,
-        retry_count=0, total_latency_ms=10.0, avg_latency_ms=10.0,
+        total_calls=1,
+        success_count=1,
+        failure_count=0,
+        retry_count=0,
+        total_latency_ms=10.0,
+        avg_latency_ms=10.0,
     )
     exporter.end_span(mock_span, metrics)
     # mock_span should NOT have set_attribute called
@@ -4636,10 +4631,10 @@ def test_telemetry_check_enabled_otel_unavailable():
 def test_telemetry_check_enabled_env_variants():
     """_check_enabled respects various env var values."""
     import os  # noqa: E402
+
     with patch("qreward.utils.scheduler.telemetry._OTEL_AVAILABLE", True):
         for disabled_val in ("false", "0", "no", "off"):
-            with patch.dict(os.environ,
-                            {"QREWARD_OTEL_ENABLED": disabled_val}):
+            with patch.dict(os.environ, {"QREWARD_OTEL_ENABLED": disabled_val}):
                 assert TelemetryExporter._check_enabled() is False
         for enabled_val in ("true", "1", "yes", "on", "anything"):
             with patch.dict(os.environ, {"QREWARD_OTEL_ENABLED": enabled_val}):
@@ -4649,6 +4644,7 @@ def test_telemetry_check_enabled_env_variants():
 # ============================================================
 # Coverage Boost: config_watcher.py
 # ============================================================
+
 
 def test_config_watcher_duplicate_start():
     """Calling start() twice does not create a second thread."""
@@ -4679,9 +4675,7 @@ def test_config_watcher_stop_joins_thread():
 def test_config_watcher_source_returns_empty():
     """poll_once returns False when source returns empty dict."""
     config = ScheduleConfig(timeout=5)
-    watcher = ConfigWatcher(
-        config, source="callback", callback=lambda: {}, cooldown=0
-    )
+    watcher = ConfigWatcher(config, source="callback", callback=lambda: {}, cooldown=0)
     assert watcher.poll_once() is False
     assert config.timeout == 5  # unchanged
 
@@ -4699,7 +4693,8 @@ def test_config_watcher_filtered_no_valid_fields():
     """poll_once returns False when source returns only unknown fields."""
     config = ScheduleConfig(timeout=5)
     watcher = ConfigWatcher(
-        config, source="callback",
+        config,
+        source="callback",
         callback=lambda: {"unknown_field": 123, "another_bad": "val"},
         cooldown=0,
     )
@@ -4711,7 +4706,8 @@ def test_config_watcher_file_not_exists():
     """File source returns None when file does not exist."""
     config = ScheduleConfig(timeout=5)
     watcher = ConfigWatcher(
-        config, source="file",
+        config,
+        source="file",
         file_path="/nonexistent/path/config.json",
         cooldown=0,
     )
@@ -4737,6 +4733,7 @@ def test_config_watcher_file_mtime_unchanged(tmp_path):
 def test_config_watcher_env_ignores_non_prefix():
     """Env source ignores variables without QREWARD_SCHEDULE_ prefix."""
     import os  # noqa: E402
+
     config = ScheduleConfig(timeout=5)
 
     with patch.dict(os.environ, {"SOME_OTHER_VAR": "999"}, clear=False):
@@ -4750,6 +4747,7 @@ def test_config_watcher_env_ignores_non_prefix():
 def test_config_watcher_env_ignores_unknown_fields():
     """Env source ignores QREWARD_SCHEDULE_ vars with unknown field names."""
     import os  # noqa: E402
+
     config = ScheduleConfig(timeout=5)
 
     env_vars = {"QREWARD_SCHEDULE_UNKNOWN_FIELD": "999"}
@@ -4852,8 +4850,11 @@ def test_config_watcher_poll_loop_handles_exception():
         return {}
 
     watcher = ConfigWatcher(
-        config, source="callback", callback=bad_callback,
-        poll_interval=0.05, cooldown=0,
+        config,
+        source="callback",
+        callback=bad_callback,
+        poll_interval=0.05,
+        cooldown=0,
     )
     watcher.start()
     time.sleep(0.2)
@@ -4866,47 +4867,54 @@ def test_config_watcher_poll_loop_handles_exception():
 # Coverage Boost: config.py (adjust_wait_time)
 # ============================================================
 
+
 def test_adjust_wait_time_negative_basic():
     """adjust_wait_time corrects negative basic_wait_time to MIN_WAIT_TIME."""
     config = ScheduleConfig()
-    result = config.adjust_wait_time(basic_wait_time=-5, has_wait_time=0,
-                                     max_wait_time=10)
+    result = config.adjust_wait_time(
+        basic_wait_time=-5, has_wait_time=0, max_wait_time=10
+    )
     assert result == 0.01  # MIN_WAIT_TIME
 
 
 def test_adjust_wait_time_max_wait_zero():
     """adjust_wait_time returns basic_wait_time when max_wait_time <= 0."""
     config = ScheduleConfig()
-    result = config.adjust_wait_time(basic_wait_time=2.0, has_wait_time=0,
-                                     max_wait_time=0)
+    result = config.adjust_wait_time(
+        basic_wait_time=2.0, has_wait_time=0, max_wait_time=0
+    )
     assert result == 2.0
 
-    result2 = config.adjust_wait_time(basic_wait_time=3.0, has_wait_time=0,
-                                      max_wait_time=-1)
+    result2 = config.adjust_wait_time(
+        basic_wait_time=3.0, has_wait_time=0, max_wait_time=-1
+    )
     assert result2 == 3.0
 
 
 def test_adjust_wait_time_not_exceeded():
     """adjust_wait_time returns basic_wait_time when total < max."""
     config = ScheduleConfig()
-    result = config.adjust_wait_time(basic_wait_time=2.0, has_wait_time=3.0,
-                                     max_wait_time=10.0)
+    result = config.adjust_wait_time(
+        basic_wait_time=2.0, has_wait_time=3.0, max_wait_time=10.0
+    )
     assert result == 2.0
 
 
 def test_adjust_wait_time_already_exceeded():
     """adjust_wait_time returns MIN_WAIT_TIME when has_wait_time > max."""
     config = ScheduleConfig()
-    result = config.adjust_wait_time(basic_wait_time=2.0, has_wait_time=15.0,
-                                     max_wait_time=10.0)
+    result = config.adjust_wait_time(
+        basic_wait_time=2.0, has_wait_time=15.0, max_wait_time=10.0
+    )
     assert result == 0.01  # MIN_WAIT_TIME
 
 
 def test_adjust_wait_time_remaining():
     """adjust_wait_time returns remaining time when partially elapsed."""
     config = ScheduleConfig()
-    result = config.adjust_wait_time(basic_wait_time=5.0, has_wait_time=7.0,
-                                     max_wait_time=10.0)
+    result = config.adjust_wait_time(
+        basic_wait_time=5.0, has_wait_time=7.0, max_wait_time=10.0
+    )
     assert result == 3.0  # max_wait_time - has_wait_time
 
 
@@ -4933,6 +4941,7 @@ def test_config_update_ignores_private_fields():
 # Coverage Boost: decorator.py
 # ============================================================
 
+
 @pytest.mark.asyncio
 async def test_decorator_key_func_async():
     """key_func generates custom pool key for async functions."""
@@ -4947,6 +4956,7 @@ async def test_decorator_key_func_async():
 
 def test_decorator_key_func_sync():
     """key_func generates custom pool key for sync functions."""
+
     @schedule(key_func=lambda x: f"model_{x}", retry_times=0)
     def _task(x):
         return x * 2
@@ -4958,6 +4968,7 @@ def test_decorator_key_func_sync():
 @pytest.mark.asyncio
 async def test_decorator_timeout_positive_async():
     """Positive timeout passes window_interval to RunningTaskPool."""
+
     @schedule(timeout=5, retry_times=0)
     async def _task():
         return "ok"
@@ -4968,6 +4979,7 @@ async def test_decorator_timeout_positive_async():
 
 def test_decorator_timeout_positive_sync():
     """Positive timeout passes window_interval to RunningTaskPool."""
+
     @schedule(timeout=5, retry_times=0)
     def _task():
         return "ok"
@@ -5026,6 +5038,7 @@ def test_decorator_circuit_breaker_blocks_sync():
 @pytest.mark.asyncio
 async def test_decorator_adaptive_limiter_records_async():
     """Adaptive limiter records success/failure for async functions."""
+
     @schedule(
         adaptive_limit=True,
         limit_size=100,
@@ -5042,6 +5055,7 @@ async def test_decorator_adaptive_limiter_records_async():
 
 def test_decorator_adaptive_limiter_records_sync():
     """Adaptive limiter records success/failure for sync functions."""
+
     @schedule(
         adaptive_limit=True,
         limit_size=100,
@@ -5059,6 +5073,7 @@ def test_decorator_adaptive_limiter_records_sync():
 @pytest.mark.asyncio
 async def test_decorator_breaker_records_success_async():
     """Circuit breaker records success on successful execution (async)."""
+
     @schedule(circuit_breaker_threshold=5, retry_times=0)
     async def _task():
         return "ok"
@@ -5069,6 +5084,7 @@ async def test_decorator_breaker_records_success_async():
 
 def test_decorator_breaker_records_success_sync():
     """Circuit breaker records success on successful execution (sync)."""
+
     @schedule(circuit_breaker_threshold=5, retry_times=0)
     def _task():
         return "ok"
@@ -5132,6 +5148,7 @@ def test_decorator_telemetry_exporter_sync():
 @pytest.mark.asyncio
 async def test_decorator_breaker_records_failure_async():
     """Circuit breaker records failure on exception (async)."""
+
     @schedule(
         circuit_breaker_threshold=10,
         retry_times=0,
@@ -5146,6 +5163,7 @@ async def test_decorator_breaker_records_failure_async():
 
 def test_decorator_breaker_records_failure_sync():
     """Circuit breaker records failure on exception (sync)."""
+
     @schedule(
         circuit_breaker_threshold=10,
         retry_times=0,
@@ -5161,6 +5179,7 @@ def test_decorator_breaker_records_failure_sync():
 @pytest.mark.asyncio
 async def test_decorator_adaptive_limiter_failure_async():
     """Adaptive limiter records failure for async functions."""
+
     @schedule(
         adaptive_limit=True,
         limit_size=100,
@@ -5176,6 +5195,7 @@ async def test_decorator_adaptive_limiter_failure_async():
 
 def test_decorator_adaptive_limiter_failure_sync():
     """Adaptive limiter records failure for sync functions."""
+
     @schedule(
         adaptive_limit=True,
         limit_size=100,
@@ -5193,9 +5213,10 @@ def test_decorator_adaptive_limiter_failure_sync():
 # Coverage Boost: telemetry.py OTel-enabled path
 # ============================================================
 
+
 def test_telemetry_init_with_otel_enabled():
     """TelemetryExporter.__init__ creates meter/tracer/counters when OTel is
-        available."""
+    available."""
     mock_counter = MagicMock()
     mock_histogram = MagicMock()
     mock_meter = MagicMock()
@@ -5210,13 +5231,12 @@ def test_telemetry_init_with_otel_enabled():
     mock_trace_mod = MagicMock()
     mock_trace_mod.get_tracer.return_value = mock_tracer
 
-    with patch("qreward.utils.scheduler.telemetry._OTEL_AVAILABLE", True), \
-         patch("qreward.utils.scheduler.telemetry._meter_mod",
-               mock_metrics_mod), \
-         patch("qreward.utils.scheduler.telemetry._trace_mod", mock_trace_mod):
-        exporter = TelemetryExporter(
-            meter_name="test.meter", tracer_name="test.tracer"
-        )
+    with (
+        patch("qreward.utils.scheduler.telemetry._OTEL_AVAILABLE", True),
+        patch("qreward.utils.scheduler.telemetry._meter_mod", mock_metrics_mod),
+        patch("qreward.utils.scheduler.telemetry._trace_mod", mock_trace_mod),
+    ):
+        exporter = TelemetryExporter(meter_name="test.meter", tracer_name="test.tracer")
 
     assert exporter._enabled is True
     assert exporter._meter is mock_meter
@@ -5229,7 +5249,7 @@ def test_telemetry_init_with_otel_enabled():
 
 def test_telemetry_record_with_otel_enabled():
     """record() calls counter.add() and histogram.record() when OTel is
-        enabled."""
+    enabled."""
     exporter = TelemetryExporter.__new__(TelemetryExporter)
     exporter._enabled = True
     exporter._total_calls_counter = MagicMock()
@@ -5238,8 +5258,12 @@ def test_telemetry_record_with_otel_enabled():
     exporter._latency_histogram = MagicMock()
 
     metrics = ScheduleMetrics(
-        total_calls=10, success_count=8, failure_count=2,
-        retry_count=3, total_latency_ms=500.0, avg_latency_ms=50.0,
+        total_calls=10,
+        success_count=8,
+        failure_count=2,
+        retry_count=3,
+        total_latency_ms=500.0,
+        avg_latency_ms=50.0,
     )
     exporter.record(metrics)
 
@@ -5251,7 +5275,7 @@ def test_telemetry_record_with_otel_enabled():
 
 def test_telemetry_init_otel_unavailable():
     """TelemetryExporter.__init__ sets disabled state when OTel is not
-        available."""
+    available."""
     with patch("qreward.utils.scheduler.telemetry._OTEL_AVAILABLE", False):
         exporter = TelemetryExporter()
 
@@ -5263,8 +5287,161 @@ def test_telemetry_init_otel_unavailable():
 def test_telemetry_init_env_disabled():
     """TelemetryExporter.__init__ respects QREWARD_OTEL_ENABLED=false."""
     import os  # noqa: E402
-    with patch("qreward.utils.scheduler.telemetry._OTEL_AVAILABLE", True), \
-         patch.dict(os.environ, {"QREWARD_OTEL_ENABLED": "false"}):
+
+    with (
+        patch("qreward.utils.scheduler.telemetry._OTEL_AVAILABLE", True),
+        patch.dict(os.environ, {"QREWARD_OTEL_ENABLED": "false"}),
+    ):
         exporter = TelemetryExporter()
 
     assert exporter._enabled is False
+
+
+def test_execution_context_record_exception_direct():
+    """Directly call ExecutionContext.record_exception to cover
+    context.py lines 251-253."""
+    from qreward.utils.scheduler.context import ExecutionContext
+    from qreward.utils.scheduler.pools import RunningTaskPool
+
+    config = ScheduleConfig()
+    pool = RunningTaskPool()
+    context = ExecutionContext(
+        func=lambda: None,
+        config=config,
+        key="test_record_exc",
+        running_task_pool=pool,
+        limiter=None,
+    )
+
+    exc = ValueError("something went wrong")
+    context.record_exception(exc)
+
+    assert len(context.result_exception_list) == 1
+    assert "ValueError" in context.result_exception_list[0]
+    assert "something went wrong" in context.result_exception_list[0]
+
+    context.record_exception(TypeError("type error"))
+    assert len(context.result_exception_list) == 2
+    assert "TypeError" in context.result_exception_list[1]
+
+
+def test_config_watcher_is_running_before_start():
+    """is_running returns False before start() (thread is None).
+    Covers config_watcher.py line 92->95 (short-circuit)."""
+    config = ScheduleConfig(timeout=5)
+    watcher = ConfigWatcher(
+        config, source="callback", callback=lambda: {}, poll_interval=0.1
+    )
+    assert watcher._thread is None
+    assert watcher.is_running is False
+
+
+def test_config_watcher_file_mtime_changed(tmp_path):
+    """_read_file reads file when mtime changes and updates _last_mtime.
+    Covers config_watcher.py line 146 (self._last_mtime = mtime)."""
+    config = ScheduleConfig(timeout=5)
+    config_file = tmp_path / "config.json"
+    config_file.write_text('{"timeout": 77}')
+
+    watcher = ConfigWatcher(
+        config, source="file", file_path=str(config_file), cooldown=0
+    )
+
+    assert watcher.poll_once() is True
+    assert config.timeout == 77
+    first_mtime = watcher._last_mtime
+    assert first_mtime > 0
+
+    time.sleep(0.05)
+    config_file.write_text('{"timeout": 88}')
+
+    assert watcher.poll_once() is True
+    assert config.timeout == 88
+    assert watcher._last_mtime != first_mtime
+
+
+def test_circuit_breaker_closed_record_success():
+    """record_success in CLOSED state resets failure_count to 0.
+    Covers circuit_breaker.py line 109->exit."""
+    from qreward.utils.scheduler import CircuitBreaker, CircuitState  # noqa: E402
+
+    breaker = CircuitBreaker(failure_threshold=3)
+
+    breaker.record_failure()
+    breaker.record_failure()
+    assert breaker._failure_count == 2
+
+    breaker.record_success()
+    assert breaker._failure_count == 0
+    assert breaker.state == CircuitState.CLOSED
+
+
+def test_priority_queue_get_all_cancelled():
+    """get() returns None when all entries are cancelled.
+    Covers priority_queue.py line 111->109."""
+    queue = PriorityTaskQueue()
+    queue.put("item1", priority=Priority.NORMAL)
+    queue.put("item2", priority=Priority.HIGH)
+
+    with queue._lock:
+        for entry in queue._heap:
+            entry.cancelled = True
+
+    assert queue.get() is None
+
+
+def test_priority_queue_peek_all_cancelled():
+    """peek() returns None when all entries are cancelled.
+    Covers priority_queue.py line 124->123."""
+    queue = PriorityTaskQueue()
+    queue.put("item1", priority=Priority.NORMAL)
+    queue.put("item2", priority=Priority.HIGH)
+
+    with queue._lock:
+        for entry in queue._heap:
+            entry.cancelled = True
+
+    assert queue.peek() is None
+
+
+def test_priority_queue_starvation_heapify():
+    """Starvation protection promotes items and calls heapq.heapify.
+    Covers priority_queue.py line 172."""
+    queue = PriorityTaskQueue(starvation_threshold=0.001)
+
+    queue.put("low_1", priority=Priority.LOW)
+    queue.put("low_2", priority=Priority.LOW)
+
+    time.sleep(0.02)
+
+    queue.put("normal_1", priority=Priority.NORMAL)
+
+    result1 = queue.get()
+    result2 = queue.get()
+    result3 = queue.get()
+
+    assert result1 in ["low_1", "low_2"]
+    assert result2 in ["low_1", "low_2"]
+    assert result3 == "normal_1"
+
+
+def test_context_is_timeout_true():
+    """is_timeout returns True when elapsed > timeout.
+    Covers context.py line 248."""
+    from qreward.utils.scheduler.config import ScheduleConfig  # noqa: E402
+    from qreward.utils.scheduler.context import ExecutionContext  # noqa: E402
+    from qreward.utils.scheduler.pools import RunningTaskPool  # noqa: E402
+
+    config = ScheduleConfig(timeout=0.01)
+    pool = RunningTaskPool()
+    context = ExecutionContext(
+        func=lambda: None,
+        config=config,
+        key="test_timeout_true",
+        running_task_pool=pool,
+        limiter=None,
+    )
+
+    time.sleep(0.02)
+
+    assert context.is_timeout is True

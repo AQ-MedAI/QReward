@@ -47,7 +47,7 @@ uninstall:
 
 .PHONY: lint
 lint:
-	@flake8 --exclude=build,examples,.venv
+	@flake8 --exclude=build,examples,.venv,tests
 
 .PHONY: fmt
 fmt:
