@@ -1,6 +1,6 @@
 [project]
 name = "qreward"
-version = "0.1.6"
+version = "0.1.7"
 description = "[QReward] RewardService Python Client"
 readme = "README.md"
 requires-python = ">=3.10"
