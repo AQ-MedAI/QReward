@@ -77,28 +77,36 @@ def httpx_keepalive_socket(
     ]
 
     if sys.platform.startswith("linux"):
-        socket_options.append((
-            socket.IPPROTO_TCP,
-            socket.TCP_KEEPIDLE,
-            keepalive_secs,
-        ))
+        socket_options.append(
+            (
+                socket.IPPROTO_TCP,
+                socket.TCP_KEEPIDLE,
+                keepalive_secs,
+            )
+        )
     elif sys.platform.startswith("darwin"):
-        socket_options.append((
-            socket.IPPROTO_TCP,
-            socket.TCP_KEEPALIVE,
-            keepalive_secs,
-        ))
+        socket_options.append(
+            (
+                socket.IPPROTO_TCP,
+                socket.TCP_KEEPALIVE,
+                keepalive_secs,
+            )
+        )
 
-    socket_options.append((
-        socket.IPPROTO_TCP,
-        socket.TCP_KEEPINTVL,
-        keepalive_interval,
-    ))
-    socket_options.append((
-        socket.IPPROTO_TCP,
-        socket.TCP_KEEPCNT,
-        keepalive_cnt,
-    ))
+    socket_options.append(
+        (
+            socket.IPPROTO_TCP,
+            socket.TCP_KEEPINTVL,
+            keepalive_interval,
+        )
+    )
+    socket_options.append(
+        (
+            socket.IPPROTO_TCP,
+            socket.TCP_KEEPCNT,
+            keepalive_cnt,
+        )
+    )
     return socket_options
 
 
@@ -118,5 +126,5 @@ class RequestsTCPKeepAliveAdapter(HTTPAdapter):
         **pool_kwargs,
     ):
         if self.socket_options is not None:
-            pool_kwargs['socket_options'] = self.socket_options
+            pool_kwargs["socket_options"] = self.socket_options
         super().init_poolmanager(connections, maxsize, block, **pool_kwargs)

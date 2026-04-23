@@ -55,10 +55,11 @@ def retry(
         if callable(retry_on):
             if not retry_on(exception):
                 return False
-        elif not isinstance(exception,
-                            tuple(retry_on)
-                            if isinstance(retry_on, (list, tuple))
-                            else (retry_on,)):
+        elif not isinstance(
+            exception,
+            tuple(retry_on) if isinstance(retry_on, (list, tuple))
+            else (retry_on,),
+        ):
             return False
 
         # 检查 check_exception

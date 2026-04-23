@@ -109,6 +109,7 @@ def test_sync_retry_on_callable():
 
 # ===== 异步函数测试 =====
 
+
 @pytest.mark.asyncio
 async def test_async_success():
     """测试异步函数成功执行"""
@@ -177,6 +178,7 @@ async def test_async_not_retry_on_other_exception():
 
 # ===== jitter 和 backoff 测试 =====
 
+
 def test_jitter_affects_delay():
     """测试 jitter=True 时延迟有随机性"""
     delays = []
@@ -190,7 +192,8 @@ def test_jitter_affects_delay():
 
     call_count = 0
 
-    with patch('random.uniform', return_value=0.1):
+    with patch("random.uniform", return_value=0.1):
+
         @retry(max_retries=2, delay=0.1, backoff_factor=2.0, jitter=True)
         def func():
             nonlocal call_count
@@ -199,7 +202,7 @@ def test_jitter_affects_delay():
                 raise ValueError
             return "ok"
 
-        with patch('time.sleep') as mock_sleep:
+        with patch("time.sleep") as mock_sleep:
             func()
             assert mock_sleep.call_count == 2
             # 第一次重试：attempt=1 → delay = 0.1 * 2^0 + 0.1 = 0.2
@@ -211,7 +214,7 @@ def test_jitter_affects_delay():
 @pytest.mark.asyncio
 async def test_async_jitter():
     """测试异步 jitter"""
-    with patch('random.uniform', return_value=0.05):
+    with patch("random.uniform", return_value=0.05):
         call_count = 0
 
         @retry(max_retries=1, delay=0.1, jitter=True)
@@ -222,7 +225,7 @@ async def test_async_jitter():
                 raise ValueError
             return "ok"
 
-        with patch('asyncio.sleep') as mock_sleep:
+        with patch("asyncio.sleep") as mock_sleep:
             await func()
             mock_sleep.assert_called_once()
             assert mock_sleep.call_args[0][0] == pytest.approx(0.1 + 0.05)
@@ -240,12 +243,13 @@ def test_no_jitter():
             raise ValueError
         return "ok"
 
-    with patch('time.sleep') as mock_sleep:
+    with patch("time.sleep") as mock_sleep:
         func()
         mock_sleep.assert_called_once_with(0.5)
 
 
 # ===== 边界情况 =====
+
 
 def test_max_retries_zero():
     """max_retries=0 表示只尝试一次，不重试"""
@@ -274,7 +278,7 @@ def test_backoff_factor_one():
             raise ValueError
         return "ok"
 
-    with patch('time.sleep') as mock_sleep:
+    with patch("time.sleep") as mock_sleep:
         func()
         assert mock_sleep.call_count == 2
         assert mock_sleep.call_args_list[0].args[0] == 0.2
@@ -282,6 +286,7 @@ def test_backoff_factor_one():
 
 
 # ===== retry_on 与 check_exception 优先级 =====
+
 
 def test_check_exception_overrides_retry_on():
     """当 retry_on 和 check_exception 同时存在，两者都必须满足？不，文档逻辑是：
@@ -294,7 +299,7 @@ def test_check_exception_overrides_retry_on():
     @retry(
         max_retries=2,
         retry_on=ValueError,  # 满足
-        check_exception=lambda e: "good" in str(e)  # 不满足
+        check_exception=lambda e: "good" in str(e),  # 不满足
     )
     def func():
         nonlocal call_count
@@ -308,6 +313,7 @@ def test_check_exception_overrides_retry_on():
 
 # ===== 覆盖 exponential_backoff 函数 =====
 
+
 def test_exponential_backoff_calculation():
     """直接测试退避函数（通过装饰器内部逻辑间接覆盖）"""
     # 通过装饰器调用间接覆盖，已在上述测试中覆盖
@@ -315,6 +321,7 @@ def test_exponential_backoff_calculation():
 
 
 # ===== 确保 should_retry 覆盖所有分支 =====
+
 
 def test_should_retry_with_list():
     """retry_on 为 list 类型"""
@@ -352,3 +359,48 @@ def test_should_retry_elif_branch_returns_false(capsys):
     # 调用被装饰的函数，触发异常进入 should_retry
     with pytest.raises(KeyError):
         unreliable_func()  # 这个调用抛异常
+
+
+def test_callable_retry_on_returns_false_skips_check_exception_sync():
+    """当 retry_on 是 callable 且返回 False 时，即使 check_exception 返回 True 也不重试。
+    覆盖 should_retry 中 callable(retry_on) 返回 False 的分支 (行 83->92)。
+    """
+    call_count = 0
+
+    @retry(
+        max_retries=3,
+        delay=0.01,
+        retry_on=lambda e: False,
+        check_exception=lambda e: True,
+    )
+    def func():
+        nonlocal call_count
+        call_count += 1
+        raise ValueError("should not retry")
+
+    with pytest.raises(ValueError, match="should not retry"):
+        func()
+    assert call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_callable_retry_on_returns_false_skips_check_exception_async():
+    """异步版本：当 retry_on 是 callable 且返回 False 时不重试。
+    覆盖 should_retry 中 callable(retry_on) 返回 False 的分支 (行 97->106)。
+    """
+    call_count = 0
+
+    @retry(
+        max_retries=3,
+        delay=0.01,
+        retry_on=lambda e: False,
+        check_exception=lambda e: True,
+    )
+    async def func():
+        nonlocal call_count
+        call_count += 1
+        raise ValueError("should not retry")
+
+    with pytest.raises(ValueError, match="should not retry"):
+        await func()
+    assert call_count == 1

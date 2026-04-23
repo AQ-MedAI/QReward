@@ -5,9 +5,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from requests.adapters import HTTPAdapter
 
-from qreward.utils import (RequestsTCPKeepAliveAdapter,
-                           aiohttp_keepalive_socket_factory,
-                           httpx_keepalive_socket)
+from qreward.utils import (
+    RequestsTCPKeepAliveAdapter,
+    aiohttp_keepalive_socket_factory,
+    httpx_keepalive_socket,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -174,8 +176,9 @@ def test_init_poolmanager_socket_options_injected():
     with patch.object(
         HTTPAdapter,
         "init_poolmanager",
-        lambda self, conns, maxsize, block=False, **kwargs:
-        called_args.update(kwargs),
+        lambda self, conns, maxsize, block=False, **kwargs: (
+            called_args.update(kwargs)
+        ),
     ):
         # 调用方法
         adapter.init_poolmanager(10, 20)
@@ -192,8 +195,9 @@ def test_init_poolmanager_socket_options_none():
     with patch.object(
         HTTPAdapter,
         "init_poolmanager",
-        lambda self, conns, maxsize, block=False, **kwargs:
-        called_args.update(kwargs),
+        lambda self, conns, maxsize, block=False, **kwargs: (
+            called_args.update(kwargs)
+        ),
     ):
         adapter.init_poolmanager(10, 20)
 

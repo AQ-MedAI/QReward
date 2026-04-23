@@ -19,12 +19,14 @@ def patch_httpx(json_lib_name: str = _default_json_lib):  # type: ignore
     if json_lib_name == "ujson":
         try:
             import ujson
+
             _use_ujson = True
         except ImportError:
             pass
     elif json_lib_name == "orjson":
         try:
             import orjson
+
             _use_orjson = True
         except ImportError:
             pass

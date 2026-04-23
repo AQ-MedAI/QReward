@@ -1,15 +1,15 @@
 import asyncio
+import logging
 import os
+import warnings
 from collections.abc import Callable
 from datetime import datetime
 from typing import (
     Any,
-    Dict,
-    List,
-    Tuple,
-    Union,
+    AsyncIterator,
     Optional,
     Sequence,
+    Union,
 )
 
 from aiolimiter import AsyncLimiter
@@ -34,14 +34,9 @@ from qreward.client.patch_openai import patch_openai_embeddings
 from qreward.types import RequestHook, ResponseHook
 from qreward.utils import patch_httpx
 
+logger = logging.getLogger(__name__)
 
-# Hard code here: 最大重试次数
-MAX_RETRIES = 10
-
-# Hard code for patch:
-patch_httpx()
-
-# 错误组
+MAX_RETRIES = 5
 _ERROR_GROUP = (
     TimeoutError,
     asyncio.TimeoutError,
@@ -60,7 +55,9 @@ class OpenAIChatProxy:
         *,
         api_key: str | None = None,
         debug: bool = False,
-        max_concurrent: int = 1024,
+        max_concurrent: int = 64,
+        chat_process_func: Callable | None = None,
+        error_process_func: Callable | None = None,
         chat_process_fuc: Callable | None = None,
         error_process_fuc: Callable | None = None,
         timeout: float | Timeout = None,
@@ -69,24 +66,33 @@ class OpenAIChatProxy:
         httpx_request_hook: RequestHook | None = None,
         httpx_response_hook: ResponseHook | None = None,
         is_hack_embedding_method: bool = False,
+        verify_ssl: bool = False,
     ):
-        """初始化 OpenAI Chat 代理
+        """初始化 OpenAI Chat 代理。"""
+        # Lazy patch: apply httpx JSON optimization on first proxy creation
+        patch_httpx()
 
-        Args:
-            base_url: OpenAI API 的地址
-            api_key: API密钥（默认尝试从环境变量 OPENAI_API_KEY 中获取）
-            debug: 是否开启调试模式（默认是: False）
-            max_concurrent: 最大并发请求数（默认是: 1024）
-            chat_process_fuc: 对话处理函数
-            error_process_fuc: 错误处理函数
-            timeout: 超时时间（默认是: None）
-            rate_limiter_bucket_size: 令牌桶大小（默认是: 50.0）
-            rate_limiter_bucket_period: 令牌桶刷新时间（默认是: 1.0）
-            httpx_request_hook: httpx 请求钩子函数（默认是: None）
-            httpx_response_hook: httpx 响应钩子函数（默认是: None）
-            is_hack_embedding_method: 是否开启 Hack Embedding 方法（默认是: False）
-        ):
-        """
+        # Handle deprecated parameters
+        if chat_process_fuc is not None:
+            warnings.warn(
+                "chat_process_fuc is deprecated, use "
+                "chat_process_func instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if chat_process_func is None:
+                chat_process_func = chat_process_fuc
+
+        if error_process_fuc is not None:
+            warnings.warn(
+                "error_process_fuc is deprecated, use "
+                "error_process_func instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if error_process_func is None:
+                error_process_func = error_process_fuc
+
         self.debug = debug
         self._max_concurrent = max_concurrent
         self._api_key = api_key or self.get_openai_key()
@@ -98,6 +104,7 @@ class OpenAIChatProxy:
             http_client=self._default_http_client(
                 request_hook=httpx_request_hook,
                 response_hook=httpx_response_hook,
+                verify=verify_ssl,
             ),
         )
 
@@ -111,8 +118,8 @@ class OpenAIChatProxy:
 
         self._default_temperature = 0.0
         self._default_timeout = 60
-        self._default_chat_process_fuc = chat_process_fuc
-        self._default_error_process_fuc = error_process_fuc
+        self._default_chat_process_func = chat_process_func
+        self._default_error_process_func = error_process_func
 
         # for hacking embedding
         self._is_hack_embedding = is_hack_embedding_method
@@ -129,9 +136,10 @@ class OpenAIChatProxy:
         self,
         request_hook: RequestHook | None = None,
         response_hook: ResponseHook | None = None,
+        verify: bool = False,
     ) -> DefaultAioHttpClient:
         _http_client = DefaultAioHttpClient(
-            verify=False,
+            verify=verify,
             # 默认值是 100 / 20，现在需要根据 self._max_concurrent 的值来调整配比
             limits=Limits(
                 max_connections=self._max_concurrent,
@@ -164,9 +172,18 @@ class OpenAIChatProxy:
         self._default_timeout = timeout
         return self
 
-    def with_error_process_fuc(self, error_process_fuc: Callable):
-        self._default_error_process_fuc = error_process_fuc
+    def with_error_process_func(self, error_process_func: Callable):
+        self._default_error_process_func = error_process_func
         return self
+
+    def with_error_process_fuc(self, error_process_fuc: Callable):
+        warnings.warn(
+            "with_error_process_fuc is deprecated, use "
+            "with_error_process_func instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.with_error_process_func(error_process_fuc)
 
     @staticmethod
     def _default_chat_completion_func(completion: ChatCompletion):
@@ -180,22 +197,17 @@ class OpenAIChatProxy:
     )
     async def chat_completion(
         self,
-        messages: list,
+        messages: list[dict[str, Any]],
         model: str,
-        **kwargs,
+        **kwargs: Any,
     ) -> str:
-        """调用 OpenAI Chat 接口
-
-        Args:
-            model: 使用的模型
-            messages: 消息
-            **kwargs: 其他参数
-
-        Returns:
-            API响应结果
-        """
+        """调用 OpenAI Chat 接口。"""
         if self.debug:
-            print(f"[time: {datetime.now()}] - [Begin] - Call model: {model}")
+            logger.debug(
+                "[time: %s] - [Begin] - Call model: %s",
+                datetime.now(),
+                model,
+            )
 
         async with self.semaphore, self.rate_limiter:
             completion: ChatCompletion = await asyncio.wait_for(
@@ -207,40 +219,30 @@ class OpenAIChatProxy:
                         self._default_temperature,
                     ),
                     stream=kwargs.get("stream"),
-                    # TODO 其他扩展参数
                 ),
                 timeout=kwargs.get("timeout", self._default_timeout),
             )
             if self.debug:
-                print(
-                    f"[time: {datetime.now()}] - [End] - "
-                    f"Call model: {model} success!",
+                logger.debug(
+                    "[time: %s] - [End] - Call model: %s success!",
+                    datetime.now(),
+                    model,
                 )
 
-            if self._default_chat_process_fuc:
-                completion = self._default_chat_process_fuc(completion)
+            if self._default_chat_process_func:
+                completion = self._default_chat_process_func(completion)
 
             return self._default_chat_completion_func(completion=completion)
 
     async def batch_chat_completion(
         self,
-        batch_messages: list,
+        batch_messages: list[list[dict[str, Any]]],
         model: str,
-        **kwargs,
+        **kwargs: Any,
     ) -> list[Any]:
-        """批量调用 OpenAI Chat 接口
-
-        Args:
-            batch_messages: 批量消息
-            model: 使用的模型
-            **kwargs: 其他参数
-
-        Returns:
-            API响应结果列表
-        """
+        """批量调用 OpenAI Chat 接口。"""
         tasks = []
         for i in range(len(batch_messages)):
-            # 插入任务
             tasks.append(
                 asyncio.create_task(
                     self.chat_completion(
@@ -251,19 +253,74 @@ class OpenAIChatProxy:
                 ),
             )
 
-        # 返回
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # 处理异常
         processed_results = []
-        for result in results:
-            if (self._default_error_process_fuc
-                    and isinstance(result, Exception)):
-                result = self._default_error_process_fuc(result)
+        for index, result in enumerate(results):
+            if isinstance(result, Exception):
+                logger.warning(
+                    "batch_chat_completion task %d/%d failed: %s: %s",
+                    index + 1,
+                    len(results),
+                    type(result).__name__,
+                    result,
+                )
+                if self._default_error_process_func:
+                    result = self._default_error_process_func(result)
 
             processed_results.append(result)
 
         return processed_results
+
+    async def stream_chat_completion(
+        self,
+        messages: list[dict[str, Any]],
+        model: str,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """流式聊天补全，逐 token 返回内容。
+
+        Args:
+            messages: 消息列表
+            model: 使用的模型
+            **kwargs: 其他参数，支持 temperature / timeout 等
+
+        Yields:
+            每个 chunk 的文本内容
+        """
+        if self.debug:
+            logger.debug(
+                "[time: %s] - [Begin] - Stream model: %s",
+                datetime.now(),
+                model,
+            )
+
+        async with self.semaphore, self.rate_limiter:
+            stream = await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=kwargs.get(
+                    "temperature", self._default_temperature
+                ),
+                stream=True,
+                timeout=kwargs.get("timeout", self._default_timeout),
+            )
+            try:
+                async for chunk in stream:
+                    if (
+                        chunk.choices
+                        and chunk.choices[0].delta.content is not None
+                    ):
+                        yield chunk.choices[0].delta.content
+            finally:
+                await stream.close()
+
+        if self.debug:
+            logger.debug(
+                "[time: %s] - [End] - Stream model: %s done!",
+                datetime.now(),
+                model,
+            )
 
     @retry(
         retry=retry_if_exception_type(exception_types=_ERROR_GROUP),
@@ -277,182 +334,103 @@ class OpenAIChatProxy:
         sentences: Optional[Union[str, Sequence]] = None,
         model: str | None = None,
         extra_body: object | None = None,
-        **kwargs,
-    ) -> list:
-        """调用 OpenAI Embeddings 接口
-
-        Args:
-            sentences: 句子列表
-            model: 使用的模型
-            extra_body: 额外的请求体参数
-                        （如果接口参数不同，建议通过 extra_body 传）
-            **kwargs: 其他参数
-
-        Returns:
-            API响应结果
-        """
-        try:
-            if self.debug:
-                print(
-                    f"[INFO] - [time: {datetime.now()}] - "
-                    f"[Begin] - Call embedding: {model}",
-                )
-
-            # typing: from openai.types import CreateEmbeddingResponse
-            embedding_resp = await asyncio.wait_for(
-                self.client.embeddings.create(
-                    input=sentences,
-                    model=model,
-                    extra_body=extra_body,
-                ),
-                timeout=kwargs.get("timeout", self._default_timeout),
+        **kwargs: Any,
+    ) -> list[Any]:
+        """调用 OpenAI Embeddings 接口。"""
+        if self.debug:
+            logger.debug(
+                "[time: %s] - [Begin] - Call embedding: %s",
+                datetime.now(),
+                model,
             )
 
-            if self.debug:
-                print(
-                    f"[INFO] - [time: {datetime.now()}] - [End] - "
-                    f"Call embedding: {model} success!",
-                )
+        embedding_resp = await asyncio.wait_for(
+            self.client.embeddings.create(
+                input=sentences,
+                model=model,
+                extra_body=extra_body,
+            ),
+            timeout=kwargs.get("timeout", self._default_timeout),
+        )
 
-            return embedding_resp.embeddings if self._is_hack_embedding \
-                else embedding_resp.data
-        except Exception as e:
-            print(
-                f"[time: {datetime.now()}] - "
-                f"[Error] - Call embedding: {model}, "
-                f"error: {e!s}, error type: {type(e)}",
+        if self.debug:
+            logger.debug(
+                "[time: %s] - [End] - Call embedding: %s success!",
+                datetime.now(),
+                model,
             )
 
-            if isinstance(e, (asyncio.exceptions.TimeoutError, TimeoutError)):
-                print(
-                    f"[time: {datetime.now()}] - "
-                    f"[Retry-Timeout] - Call model: {model}",
-                )
-                raise TimeoutError
+        return (
+            embedding_resp.embeddings
+            if self._is_hack_embedding
+            else embedding_resp.data
+        )
 
-            return []
+    async def batch_stream_chat_completion(
+        self,
+        batch_messages: list[list[dict[str, Any]]],
+        model: str,
+        max_concurrent_streams: int = 0,
+        on_stream_error: Callable[[int, Exception], None] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[tuple[int, str]]:
+        """并发多个流式请求，yield (batch_index, token) 元组。"""
+        if not batch_messages:
+            return
+        queue: asyncio.Queue[tuple[int, str] | None] = asyncio.Queue()
+        sem = (
+            asyncio.Semaphore(max_concurrent_streams)
+            if max_concurrent_streams > 0
+            else None
+        )
+
+        async def _run(idx: int, msgs: list[dict[str, Any]]) -> None:
+            try:
+                if sem:
+                    await sem.acquire()
+                async for tok in self.stream_chat_completion(
+                    msgs, model, **kwargs
+                ):
+                    await queue.put((idx, tok))
+            except Exception as exc:
+                if on_stream_error:
+                    on_stream_error(idx, exc)
+            finally:
+                if sem:
+                    sem.release()
+
+        tasks = [
+            asyncio.create_task(_run(i, m))
+            for i, m in enumerate(batch_messages)
+        ]
+
+        async def _drain() -> None:
+            await asyncio.gather(*tasks, return_exceptions=True)
+            await queue.put(None)
+
+        sentinel = asyncio.create_task(_drain())
+        while (item := await queue.get()) is not None:
+            yield item
+        await sentinel
 
     async def batch_embeddings(
         self,
         *,
-        batch_sentences: List[Union[str, Sequence]],
+        batch_sentences: list[Union[str, Sequence]],
         model: str | None = None,
-        extra_bodies: List[object] | None = None,
-        **kwargs,
-    ) -> list[list]:
-        """批量调用 OpenAI Embeddings 接口
-
-        Args:
-            batch_sentences: 多个句子列表
-            model: 使用的模型
-            extra_bodies: 额外的请求体参数列表
-            **kwargs: 其他参数
-
-        Returns:
-            API响应结果
-        """
-        tasks = []
-        for i in range(len(batch_sentences)):
-            # 插入任务
-            tasks.append(
-                asyncio.create_task(
-                    self.embeddings(
-                        model=model,
-                        sentences=batch_sentences[i],
-                        extra_body=extra_bodies[i] if extra_bodies else None,
-                        **kwargs,
-                    ),
-                ),
+        extra_bodies: list[object] | None = None,
+        **kwargs: Any,
+    ) -> list[list[Any]]:
+        """批量调用 OpenAI Embeddings 接口。"""
+        tasks = [
+            asyncio.create_task(
+                self.embeddings(
+                    model=model,
+                    sentences=batch_sentences[i],
+                    extra_body=extra_bodies[i] if extra_bodies else None,
+                    **kwargs,
+                )
             )
-
-        # 返回
+            for i in range(len(batch_sentences))
+        ]
         return await asyncio.gather(*tasks)
-
-
-class OpenAIChatProxyManager:
-    """管理多个 key -> OpenAIChatProxy 的映射"""
-
-    def __init__(self):
-        self._proxies: Dict[str, OpenAIChatProxy] = {}
-
-    def add_proxy_with_default(self, key: str, base_url: str, api_key: str):
-        """添加一个默认代理
-
-        Args:
-            key: 代理标识
-            base_url: OpenAI API 基础 URL
-            api_key: OpenAI API 密钥
-        """
-        self.add_proxy(
-            key=key,
-            proxy=OpenAIChatProxy(
-                base_url=base_url,
-                api_key=api_key,
-            ),
-        )
-        return self
-
-    def add_proxies_with_default(self, proxies: Dict[str, Tuple[str, str]]):
-        """添加多个默认代理
-
-        Args:
-            proxies: 多个代理的映射，key 为代理标识，value 为 (base_url, api_key) 元组
-        """
-        for key, (base_url, api_key) in proxies.items():
-            self.add_proxy_with_default(
-                key=key,
-                base_url=base_url,
-                api_key=api_key,
-            )
-        return self
-
-    def add_proxy(self, key: str, proxy: OpenAIChatProxy):
-        """添加一个代理（配置自定义参数的都走这个）
-
-        Args:
-            key: 代理标识
-            proxy: OpenAIChatProxy 实例
-        """
-        if key in self._proxies:
-            raise ValueError(f"Proxy with key={key!r} already exists.")
-        self._proxies[key] = proxy
-        return self
-
-    def proxy(self, key: str) -> OpenAIChatProxy:
-        """获取一个代理
-
-        Args:
-            key: 代理标识
-        """
-        try:
-            return self._proxies[key]
-        except KeyError:
-            raise KeyError(f"Proxy with key={key!r} does not exist.")
-
-    def exist_proxy(self, key: str) -> bool:
-        """检查是否存在代理
-
-        Args:
-            key: 代理标识
-        """
-        return key in self._proxies
-
-    def proxies(self) -> Dict[str, OpenAIChatProxy]:
-        """获取所有代理"""
-        return self._proxies
-
-    async def remove_proxy(self, key: str):
-        """移除并关闭代理
-
-        Args:
-            key: 代理标识
-        """
-        proxy = self._proxies.pop(key, None)
-        if proxy:
-            await proxy.client.close()
-
-    async def close(self):
-        """关闭所有代理"""
-        for proxy in self._proxies.values():
-            await proxy.client.close()
-        self._proxies.clear()

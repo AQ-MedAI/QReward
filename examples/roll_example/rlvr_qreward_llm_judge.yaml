@@ -1,0 +1,148 @@
+# ROLL RLVR Configuration — Using QReward for LLM-as-Judge Reward
+#
+# This config demonstrates how to use QReward's OpenAIChatProxy as the
+# reward computation backend in ROLL's RLVR pipeline. Instead of running
+# the Judge model on local GPUs (ROLL's built-in LLMJudgeRewardWorker),
+# this setup calls a remote OpenAI-compatible API via QReward.
+#
+# Advantages over built-in LLMJudgeRewardWorker:
+#   - No GPU allocation needed for the Judge model
+#   - High-concurrency async calls with automatic retry
+#   - Load balancing across multiple API endpoints
+#   - Circuit breaker and adaptive rate limiting
+#
+# Environment variables required:
+#   OPENAI_API_BASE:       Judge API endpoint (e.g., https://api.deepseek.com/v1)
+#   OPENAI_API_KEY:        API key for the Judge service
+#   JUDGE_MODEL:           Model name (default: DeepSeek-R1)
+#   JUDGE_MAX_CONCURRENT:  Max concurrent requests (default: 64)
+#
+# Optional (for multi-endpoint load balancing):
+#   JUDGE_EXTRA_URLS:      Comma-separated extra API endpoints
+#   JUDGE_EXTRA_KEYS:      Comma-separated extra API keys
+#
+# Usage:
+#   python examples/start_rlvr_pipeline.py --config_name rlvr_qreward_llm_judge
+
+hydra:
+  run:
+    dir: .
+    output_subdir: null
+
+exp_name: "qwen2.5-7B-rlvr-qreward"
+seed: 42
+logging_dir: ./output/logs
+output_dir: ./output
+
+checkpoint_config:
+  type: file_system
+  output_dir: ./output/models/${exp_name}
+
+track_with: tensorboard
+tracker_kwargs:
+  log_dir: ./output/tensorboard/${exp_name}
+
+num_gpus_per_node: 8
+max_steps: 500
+save_steps: 100
+logging_steps: 1
+eval_steps: 10
+resume_from_checkpoint: false
+
+rollout_batch_size: 64
+prompt_length: 2048
+response_length: 4096
+num_return_sequences_in_group: 8
+
+ppo_epochs: 1
+adv_estimator: "reinforce"
+
+# Clipping
+value_clip: 0.5
+reward_clip: 10
+advantage_clip: 2.0
+
+# Normalization
+norm_mean_type: ~
+norm_std_type: ~
+
+# Advantage
+whiten_advantages: true
+
+global_template: qwen2_5
+pretrain: Qwen/Qwen2.5-7B
+
+# ---- Actor Training ----
+actor_train:
+  model_args:
+    disable_gradient_checkpointing: false
+    dtype: bf16
+  training_args:
+    learning_rate: 1.0e-6
+    weight_decay: 0
+    per_device_train_batch_size: 1
+    gradient_accumulation_steps: 64
+    warmup_steps: 20
+  data_args:
+    template: qwen2_5
+    file_name:
+      - data/your_training_data.jsonl
+    domain_interleave_probs:
+      llm_judge: 1.0
+  strategy_args:
+    strategy_name: megatron_train
+    strategy_config:
+      tensor_model_parallel_size: 1
+      pipeline_model_parallel_size: 1
+      use_distributed_optimizer: true
+      recompute_granularity: full
+      device_mapping: list(range(0,8))
+  infer_batch_size: 4
+
+# ---- Actor Inference (Rollout) ----
+actor_infer:
+  model_args:
+    disable_gradient_checkpointing: true
+    dtype: bf16
+  generating_args:
+    max_new_tokens: ${response_length}
+    top_p: 0.99
+    top_k: 100
+    temperature: 0.99
+    num_return_sequences: ${num_return_sequences_in_group}
+  data_args:
+    template: qwen2_5
+  strategy_args:
+    strategy_name: vllm
+    strategy_config:
+      gpu_memory_utilization: 0.85
+      max_model_len: 8000
+      device_mapping: list(range(0,8))
+  infer_batch_size: 1
+
+# ---- Reference Model ----
+reference:
+  model_args:
+    disable_gradient_checkpointing: true
+    dtype: bf16
+  data_args:
+    template: qwen2_5
+  strategy_args:
+    strategy_name: megatron_infer
+    strategy_config:
+      tensor_model_parallel_size: 1
+      pipeline_model_parallel_size: 1
+      device_mapping: list(range(0,8))
+  infer_batch_size: 8
+
+# ---- Reward (QReward LLM-as-Judge via Remote API) ----
+# Key difference: No GPU allocation needed for the Judge model.
+# The reward worker calls the remote API using QReward's OpenAIChatProxy.
+rewards:
+  llm_judge:
+    worker_cls: multiturn_llm_reward.QRewardLLMJudgeWorker
+    tag_included: [RLVR]
+    # No model_args, generating_args, or strategy_args needed —
+    # the Judge model runs on a remote API server, not local GPUs.
+    # All configuration is done via environment variables:
+    #   OPENAI_API_BASE, OPENAI_API_KEY, JUDGE_MODEL, etc.

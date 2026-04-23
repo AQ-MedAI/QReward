@@ -103,9 +103,44 @@ $ make install
 
 ## 📝 使用
 
-* 非框架加速方式：[Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/normal)
-* 结合 Verl 框架使用示例: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/verl_example)
-* 结合 Slime 框架使用示例: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/slime_example)
+### 纯加速方式
+
+* [单次调用](examples/normal/single_call.py) — 基础 OpenAI 代理使用（单次请求、上下文管理器、代理管理器）
+* [批量调用](examples/normal/batch_call.py) — 批量聊天完成和批量 Embedding 调用
+
+### Schedule 调度装饰器
+
+| 功能 | 示例 | 关键参数 |
+|------|------|----------|
+| **同步函数** | [schedule_sync.py](examples/schedule/schedule_sync.py) | `retry_times` |
+| **调试日志** | [schedule_debug.py](examples/schedule/schedule_debug.py) | `debug=True` |
+| **超时控制** | [schedule_timeout.py](examples/schedule/schedule_timeout.py) | `timeout`（整体执行截止时间，单位秒） |
+| **限流控制** | [schedule_limit.py](examples/schedule/schedule_limit.py) | `limit_size`, `key_func` |
+| **重试与加速** | [schedule_retry.py](examples/schedule/schedule_retry.py) | `retry_times`, `exception_types`, `retry_interval` |
+| **默认值** | [schedule_default_value.py](examples/schedule/schedule_default_value.py) | `default_result`（固定值、None 或函数） |
+| **对冲请求** | [schedule_hedged_request.py](examples/schedule/schedule_hedged_request.py) | `hedged_request_time`, `hedged_request_max_times` |
+| **熔断器** | [schedule_circuit_breaker.py](examples/schedule/schedule_circuit_breaker.py) | `circuit_breaker_threshold`, `circuit_breaker_recovery` |
+| **自适应限流** | [schedule_adaptive_limit.py](examples/schedule/schedule_adaptive_limit.py) | `adaptive_limit=True`, `adaptive_error_threshold` |
+| **指标回调** | [schedule_metrics_callback.py](examples/schedule/schedule_metrics_callback.py) | `metrics_callback` |
+| **优先级队列** | [schedule_priority.py](examples/schedule/schedule_priority.py) | `priority`（HIGH / NORMAL / LOW） |
+| **OpenTelemetry** | [schedule_telemetry.py](examples/schedule/schedule_telemetry.py) | `telemetry_exporter` |
+| **配置热更新** | [schedule_config_hot_reload.py](examples/schedule/schedule_config_hot_reload.py) | `ScheduleConfig`, `ConfigWatcher` |
+| **多功能组合** | [schedule_combined.py](examples/schedule/schedule_combined.py) | 所有功能协同使用 |
+
+### Client（多源算力调度）
+
+| 功能 | 示例 | 关键概念 |
+|------|------|----------|
+| **负载均衡** | [client_load_balancer.py](examples/client/client_load_balancer.py) | `ROUND_ROBIN`、`WEIGHTED_ROUND_ROBIN`、`mark_unhealthy`、故障转移 |
+| **模型路由** | [client_model_router.py](examples/client/client_model_router.py) | `register_model_route`、通配符匹配（`gpt-*`）、分组策略 |
+| **流式响应** | [client_streaming.py](examples/client/client_streaming.py) | `stream_chat_completion`、逐 token 输出 |
+| **批量流式** | [client_batch_streaming.py](examples/client/client_batch_streaming.py) | `batch_stream_chat_completion`、`max_concurrent_streams`、`on_stream_error` |
+
+### 框架集成
+
+* 结合 ROLL 框架使用示例: [Examples](examples/roll_example) — 通过远程 API 实现 LLM-as-Judge Reward，支持负载均衡
+* 结合 Verl 框架使用示例: [Examples](examples/verl_example)
+* 结合 Slime 框架使用示例: [Examples](examples/slime_example)
 
 ## ⛏ 代码质量
 

@@ -105,9 +105,44 @@ $ make install
 
 ## 📝 Usage
 
-* Pure accelerate examples: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/normal)
-* With verl Framework examples: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/verl_example)
-* With slime Framework examples: [Examples](https://github.com/AQ-MedAI/QReward/tree/main/examples/slime_example)
+### Pure Acceleration
+
+* [Single Call](examples/normal/single_call.py) — Basic OpenAI proxy usage (single request, context manager, proxy manager)
+* [Batch Call](examples/normal/batch_call.py) — Batch chat completion and batch embedding calls
+
+### Schedule Decorator
+
+| Feature | Example | Key Parameters |
+|---------|---------|----------------|
+| **Sync Function** | [schedule_sync.py](examples/schedule/schedule_sync.py) | `retry_times` |
+| **Debug Logging** | [schedule_debug.py](examples/schedule/schedule_debug.py) | `debug=True` |
+| **Timeout** | [schedule_timeout.py](examples/schedule/schedule_timeout.py) | `timeout` (wall-clock deadline in seconds) |
+| **Rate Limiting** | [schedule_limit.py](examples/schedule/schedule_limit.py) | `limit_size`, `key_func` |
+| **Retry & Speed-up** | [schedule_retry.py](examples/schedule/schedule_retry.py) | `retry_times`, `exception_types`, `retry_interval` |
+| **Default Value** | [schedule_default_value.py](examples/schedule/schedule_default_value.py) | `default_result` (value, None, or callable) |
+| **Hedged Request** | [schedule_hedged_request.py](examples/schedule/schedule_hedged_request.py) | `hedged_request_time`, `hedged_request_max_times` |
+| **Circuit Breaker** | [schedule_circuit_breaker.py](examples/schedule/schedule_circuit_breaker.py) | `circuit_breaker_threshold`, `circuit_breaker_recovery` |
+| **Adaptive Limiting** | [schedule_adaptive_limit.py](examples/schedule/schedule_adaptive_limit.py) | `adaptive_limit=True`, `adaptive_error_threshold` |
+| **Metrics Callback** | [schedule_metrics_callback.py](examples/schedule/schedule_metrics_callback.py) | `metrics_callback` |
+| **Priority Queue** | [schedule_priority.py](examples/schedule/schedule_priority.py) | `priority` (HIGH / NORMAL / LOW) |
+| **OpenTelemetry** | [schedule_telemetry.py](examples/schedule/schedule_telemetry.py) | `telemetry_exporter` |
+| **Config Hot Reload** | [schedule_config_hot_reload.py](examples/schedule/schedule_config_hot_reload.py) | `ScheduleConfig`, `ConfigWatcher` |
+| **Combined Features** | [schedule_combined.py](examples/schedule/schedule_combined.py) | All features working together |
+
+### Client (Multi-Source Scheduling)
+
+| Feature | Example | Key Concepts |
+|---------|---------|--------------|
+| **Load Balancer** | [client_load_balancer.py](examples/client/client_load_balancer.py) | `ROUND_ROBIN`, `WEIGHTED_ROUND_ROBIN`, `mark_unhealthy`, failover |
+| **Model Router** | [client_model_router.py](examples/client/client_model_router.py) | `register_model_route`, glob patterns (`gpt-*`), per-group strategy |
+| **Streaming** | [client_streaming.py](examples/client/client_streaming.py) | `stream_chat_completion`, token-by-token output |
+| **Batch Streaming** | [client_batch_streaming.py](examples/client/client_batch_streaming.py) | `batch_stream_chat_completion`, `max_concurrent_streams`, `on_stream_error` |
+
+### Framework Integration
+
+* With ROLL Framework: [Examples](examples/roll_example) — LLM-as-Judge reward via remote API with load balancing
+* With verl Framework: [Examples](examples/verl_example)
+* With slime Framework: [Examples](examples/slime_example)
 
 ## ⛏ Code Quality
 

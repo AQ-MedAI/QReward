@@ -40,7 +40,7 @@ _example_messages = [
                    "double-slit experiment in more detail?",
     },
 ]
-BATCH_MESSAGES = [_example_messages * task_size]
+BATCH_MESSAGES = [_example_messages] * task_size
 
 
 async def simple_call_batch():
@@ -51,7 +51,7 @@ async def simple_call_batch():
     )
 
     batch_call_result = await proxy.batch_chat_completion(
-        batch_messages=_example_messages,
+        batch_messages=BATCH_MESSAGES,
         model="DeepSeek-R1",
     )
 
@@ -69,7 +69,7 @@ async def simple_call_batch_by_context():
         api_key=os.getenv("OPENAI_API_KEY"),
     ) as proxy:
         batch_call_result = await proxy.batch_chat_completion(
-            batch_messages=_example_messages,
+            batch_messages=BATCH_MESSAGES,
             model="DeepSeek-R1",
         )
 

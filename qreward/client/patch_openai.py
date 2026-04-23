@@ -33,20 +33,35 @@ def hack_parser(
     return obj
 
 
+# Store the original method reference for unpatch support
+_original_async_embeddings_create = None
+
+
 # ===== PATCH 函数 =====
 def patch_openai_embeddings(
     custom_return_cls: type = HackCreateEmbeddingResponse,
     custom_parser: Callable = hack_parser,
-):
-    """
-    运行时替换 OpenAI Python SDK 的 AsyncEmbeddings.create 方法，
-    让其返回自定义的 Response 类，并使用自定义的 parser。
+) -> None:
+    """Replace OpenAI AsyncEmbeddings.create with a custom implementation.
+
+    Replaces the method at runtime to return a custom Response class
+    and use a custom parser. Can be reversed with unpatch_openai_embeddings().
 
     Args:
-        custom_return_cls: 自定义返回类（BaseModel子类）
-        custom_parser: 自定义parser函数，接收并返回 custom_return_cls 实例
+        custom_return_cls: Custom return class (BaseModel subclass)
+        custom_parser: Custom parser function that receives and returns
+            a custom_return_cls instance
     """
+    global _original_async_embeddings_create
     from openai.resources.embeddings import AsyncEmbeddings
+
+    # Save original method only on first patch to support idempotent unpatch.
+    # Use getattr to handle test scenarios where AsyncEmbeddings may be mocked
+    # with a dummy class that lacks a 'create' attribute.
+    if _original_async_embeddings_create is None:
+        _original_async_embeddings_create = getattr(
+            AsyncEmbeddings, "create", None
+        )
 
     async def patched_create(
         self,
@@ -87,5 +102,20 @@ def patch_openai_embeddings(
             cast_to=custom_return_cls,
         )
 
-    # 替换方法
     AsyncEmbeddings.create = patched_create
+
+
+def unpatch_openai_embeddings() -> None:
+    """Restore OpenAI AsyncEmbeddings.create to its original implementation.
+
+    This reverses the effect of patch_openai_embeddings(). If patch has not
+    been applied, this function is a no-op (idempotent).
+    """
+    global _original_async_embeddings_create
+    if _original_async_embeddings_create is None:
+        return
+
+    from openai.resources.embeddings import AsyncEmbeddings
+
+    AsyncEmbeddings.create = _original_async_embeddings_create
+    _original_async_embeddings_create = None
